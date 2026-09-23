@@ -4,56 +4,103 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 240 10% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 10% 3.9%;
+    /* shadcn 令牌（retuned 到 Bento：紫主色 + 冷调中性画布） */
+    --background: 220 14% 96%;   /* 画布 #f4f5f7 */
+    --foreground: 231 20% 11%;   /* 文字 #171923 */
+    --card: 0 0% 100%;           /* 卡面 白 */
+    --card-foreground: 231 20% 11%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 10% 3.9%;
-    --primary: 221 83% 53%;
+    --popover-foreground: 231 20% 11%;
+    --primary: 258 90% 66%;      /* 紫 #8b5cf6 */
     --primary-foreground: 0 0% 100%;
-    --secondary: 240 4.8% 95.9%;
-    --secondary-foreground: 240 5.9% 10%;
-    --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
-    --accent: 240 4.8% 95.9%;
-    --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 72% 51%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 231 20% 11%;
+    --muted: 210 40% 97%;
+    --muted-foreground: 232 13% 37%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 231 20% 11%;
+    --destructive: 350 89% 60%;  /* 玫红 */
     --destructive-foreground: 0 0% 100%;
-    --border: 240 5.9% 90%;
-    --input: 240 5.9% 90%;
-    --ring: 221 83% 53%;
+    --border: 223 13% 91%;
+    --input: 223 13% 91%;
+    --ring: 258 90% 66%;
     --radius: 0.75rem;
+
+    /* Bento 强调色（直接 hex/渐变，供组件类使用） */
+    --violet: #8b5cf6; --violet-2: #9333ea;
+    --blue: #22d3ee;   --blue-2: #3b82f6;
+    --rose: #f43f5e;   --rose-2: #e11d48;
+    --emerald: #10b981;--emerald-2: #059669;
+    --amber: #fbbf24;  --amber-2: #d97706;
+    --dark-tile-bg: #171923; --dark-tile-text: #f4f5f7;
+    --violet-soft-bg: #ede9fe; --violet-soft-tx: #7c3aed;
+    --blue-soft-bg: #e0f2fe;   --blue-soft-tx: #2563eb;
+    --rose-soft-bg: #ffe4e6;   --rose-soft-tx: #e11d48;
+    --emerald-soft-bg: #d1fae5;--emerald-soft-tx: #059669;
+    --amber-soft-bg: #fef3c7;  --amber-soft-tx: #b45309;
+    --shadow: 0 1px 2px rgba(16,18,32,.04), 0 8px 24px -12px rgba(16,18,32,.12);
+    --shadow-lift: 0 2px 4px rgba(16,18,32,.06), 0 18px 40px -16px rgba(16,18,32,.22);
   }
 
   .dark {
-    --background: 240 10% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 240 10% 5.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 217 91% 60%;
-    --primary-foreground: 240 10% 3.9%;
-    --secondary: 240 3.7% 15.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 240 3.7% 15.9%;
-    --muted-foreground: 240 5% 64.9%;
-    --accent: 240 3.7% 15.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
-    --input: 240 3.7% 15.9%;
-    --ring: 217 91% 60%;
+    --background: 228 18% 5%;
+    --foreground: 220 14% 96%;
+    --card: 231 19% 10%;
+    --card-foreground: 220 14% 96%;
+    --popover: 231 19% 10%;
+    --popover-foreground: 220 14% 96%;
+    --primary: 258 90% 70%;
+    --primary-foreground: 231 20% 11%;
+    --secondary: 226 19% 15%;
+    --secondary-foreground: 220 14% 96%;
+    --muted: 226 19% 13%;
+    --muted-foreground: 227 16% 70%;
+    --accent: 226 19% 15%;
+    --accent-foreground: 220 14% 96%;
+    --destructive: 350 80% 55%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 226 16% 20%;
+    --input: 226 16% 20%;
+    --ring: 258 90% 70%;
+
+    --dark-tile-bg: #000000; --dark-tile-text: #f4f5f7;
+    --violet-soft-bg: rgba(139,92,246,.16); --violet-soft-tx: #c4b5fd;
+    --blue-soft-bg: rgba(59,130,246,.16);   --blue-soft-tx: #93c5fd;
+    --rose-soft-bg: rgba(244,63,94,.16);     --rose-soft-tx: #fda4af;
+    --emerald-soft-bg: rgba(16,185,129,.16); --emerald-soft-tx: #6ee7b7;
+    --amber-soft-bg: rgba(251,191,36,.16);   --amber-soft-tx: #fcd34d;
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 8px 24px -12px rgba(0,0,0,.6);
+    --shadow-lift: 0 2px 4px rgba(0,0,0,.5), 0 18px 40px -16px rgba(0,0,0,.7);
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+}
+
+@layer components {
+  /* 渐变块（hero/CTA/大砖） */
+  .grad-violet { background: linear-gradient(135deg, var(--violet), var(--violet-2)); color: #fff; }
+  .grad-blue { background: linear-gradient(135deg, var(--blue), var(--blue-2)); color: #fff; }
+  .grad-emerald { background: linear-gradient(135deg, var(--emerald), var(--emerald-2)); color: #fff; }
+  .tile-dark { background: var(--dark-tile-bg); color: var(--dark-tile-text); }
+  /* 柔和底色砖（随主题翻） */
+  .soft-violet { background: var(--violet-soft-bg); color: var(--violet-soft-tx); }
+  .soft-blue { background: var(--blue-soft-bg); color: var(--blue-soft-tx); }
+  .soft-rose { background: var(--rose-soft-bg); color: var(--rose-soft-tx); }
+  .soft-emerald { background: var(--emerald-soft-bg); color: var(--emerald-soft-tx); }
+  .soft-amber { background: var(--amber-soft-bg); color: var(--amber-soft-tx); }
+  /* 阴影 */
+  .shadow-soft { box-shadow: var(--shadow); }
+  .shadow-lift { box-shadow: var(--shadow-lift); }
+  /* 进度条填充 */
+  .fill-violet { background: linear-gradient(90deg, var(--violet), var(--violet-2)); }
+  .fill-blue { background: linear-gradient(90deg, var(--blue), var(--blue-2)); }
+  .fill-amber { background: linear-gradient(90deg, var(--amber), var(--amber-2)); }
+  .fill-emerald { background: linear-gradient(90deg, var(--emerald), var(--emerald-2)); }
+  .fill-rose { background: linear-gradient(90deg, var(--rose), var(--rose-2)); }
+  /* eyebrow 小标题 */
+  .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: hsl(var(--muted-foreground)); }
+  .num { font-variant-numeric: tabular-nums; }
 }

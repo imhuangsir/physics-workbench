@@ -17,7 +17,7 @@ export function Modal({ open, onClose, title, children, className }: {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className={cn("relative z-10 w-full max-w-md rounded-xl border bg-card p-5 shadow-lg", className)}>
+      <div className={cn("relative z-10 w-full max-w-md rounded-3xl border bg-card p-5 shadow-lift", className)}>
         <div className="mb-3 flex items-center justify-between">
           {title ? <h2 className="text-base font-semibold">{title}</h2> : <span />}
           <button aria-label="关闭" onClick={onClose} className="rounded-lg p-1 text-muted-foreground hover:bg-accent">

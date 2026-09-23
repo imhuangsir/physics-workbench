@@ -2,9 +2,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
+import { ArrowRight } from "lucide-react";
 import { api } from "@/lib/client/fetcher";
 import { FadeIn } from "@/components/motion/fade-in";
-import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
+import { SectionLabel } from "@/components/ui/bento";
 
 type ClassRow = { id: number; name: string; count: number };
 type Assignment = { id: number; title: string };
@@ -21,26 +22,41 @@ export default function TeacherHome() {
   const totalStudents = classes.reduce((a, c) => a + Number(c.count ?? 0), 0);
 
   const tiles = [
-    { href: "/teacher/roster", title: "班级 / 名单", desc: `${classes.length} 个班级 · ${totalStudents} 名学生` },
-    { href: "/teacher/questions", title: "题库", desc: "创建与管理题目" },
-    { href: "/teacher/assignments", title: "作业", desc: `${assignments.length} 个作业` },
+    { href: "/teacher/roster", cls: "soft-violet", k: "班级", v: classes.length, cap: "个教学班" },
+    { href: "/teacher/roster", cls: "soft-emerald", k: "学生", v: totalStudents, cap: "名在册" },
+    { href: "/teacher/assignments", cls: "soft-blue", k: "作业", v: assignments.length, cap: "份 · 点击查看" },
+    { href: "/teacher/questions", cls: "tile-dark", k: "题库", v: "→", cap: "创建与管理题目" },
   ];
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {tiles.map((t, i) => (
-        <FadeIn key={t.href} delay={i * 0.05}>
-          <Link href={t.href}>
-            <Card className="h-full transition-shadow hover:shadow-md">
-              <CardHeader>
-                <CardTitle>{t.title}</CardTitle>
-                <CardDescription>{t.desc}</CardDescription>
-              </CardHeader>
-              <CardContent className="text-sm text-primary">进入 →</CardContent>
-            </Card>
+    <div className="space-y-6">
+      <SectionLabel>老师概览 · Bento 栅格</SectionLabel>
+      <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+        <FadeIn>
+          <Link href="/teacher/assignments"
+            className="grad-violet flex min-h-[172px] flex-col justify-between rounded-3xl p-6 shadow-soft transition hover:opacity-95 sm:col-span-2 sm:row-span-2 md:min-h-full">
+            <div>
+              <h2 className="text-2xl font-extrabold tracking-tight">八年级物理 · 老师后台</h2>
+              <p className="mt-1.5 text-sm text-white/90">建班 · 名单 · 题库 · 作业 · 统计，一处掌握</p>
+            </div>
+            <span className="inline-flex w-fit items-center gap-1 rounded-full bg-white/20 px-4 py-2 text-sm font-semibold">
+              新建作业 <ArrowRight className="h-4 w-4" />
+            </span>
           </Link>
         </FadeIn>
-      ))}
+        {tiles.map((t, i) => (
+          <FadeIn key={t.k} delay={(i + 1) * 0.04}>
+            <Link href={t.href}
+              className={`flex min-h-[132px] flex-col justify-between rounded-3xl p-5 shadow-soft transition hover:opacity-95 ${t.cls}`}>
+              <div className="text-sm font-semibold opacity-90">{t.k}</div>
+              <div>
+                <div className="num text-4xl font-extrabold leading-none tracking-tight">{t.v}</div>
+                <div className="mt-1 text-sm opacity-90">{t.cap}</div>
+              </div>
+            </Link>
+          </FadeIn>
+        ))}
+      </div>
     </div>
   );
 }

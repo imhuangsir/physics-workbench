@@ -5,6 +5,7 @@ import { api } from "@/lib/client/fetcher";
 import { formatDuration } from "@/components/timer";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { StatTile } from "@/components/ui/bento";
 
 type Ans = {
   questionId: number; type: string; stem: string;
@@ -32,22 +33,11 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
-      <Card>
-        <CardContent className="grid grid-cols-3 gap-4 p-6 text-center">
-          <div>
-            <div className="text-2xl font-bold text-primary">{res.objectiveScore ?? "—"}</div>
-            <div className="text-xs text-muted-foreground">客观得分</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold">{res.totalScore ?? "—"}</div>
-            <div className="text-xs text-muted-foreground">总分</div>
-          </div>
-          <div>
-            <div className="text-2xl font-bold tabular-nums">{res.durationSec != null ? formatDuration(res.durationSec) : "—"}</div>
-            <div className="text-xs text-muted-foreground">用时</div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-3 gap-3">
+        <StatTile tone="violet" value={res.objectiveScore ?? "—"} label="客观得分" />
+        <StatTile tone="emerald" value={res.totalScore ?? "—"} label="总分" />
+        <StatTile tone="amber" value={res.durationSec != null ? formatDuration(res.durationSec) : "—"} label="用时" />
+      </div>
 
       {res.answers.map((a, idx) => (
         <Card key={a.questionId}>

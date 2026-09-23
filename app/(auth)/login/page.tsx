@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 type Cls = { id: number; name: string };
 type Tab = "student" | "teacher";
@@ -79,13 +80,16 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-muted/30 p-4">
+    <main className="relative flex min-h-dvh items-center justify-center bg-background p-4">
+      <div className="absolute right-4 top-4">
+        <ThemeToggle />
+      </div>
       <FadeIn>
         <Card className="w-full max-w-sm">
           <CardHeader>
-            <CardTitle>八年级物理练习工作台</CardTitle>
+            <CardTitle className="text-xl font-extrabold tracking-tight">八年级物理练习工作台</CardTitle>
             <CardDescription>请选择身份登录</CardDescription>
-            <div className="mt-3 grid grid-cols-2 gap-2 rounded-xl bg-muted p-1">
+            <div className="mt-3 grid grid-cols-2 gap-1 rounded-xl bg-secondary p-1">
               {(["student", "teacher"] as Tab[]).map((t) => (
                 <button
                   key={t}
@@ -93,7 +97,7 @@ export default function LoginPage() {
                   onClick={() => setTab(t)}
                   className={
                     "rounded-lg px-3 py-2 text-sm font-medium transition-colors " +
-                    (tab === t ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground")
+                    (tab === t ? "bg-card shadow-soft" : "text-muted-foreground hover:text-foreground")
                   }
                 >
                   {t === "student" ? "学生" : "老师"}
