@@ -45,6 +45,11 @@ npm run dev
 | --- | --- | --- | --- |
 | `ADMIN_PASSWORD` | 老师后台登录密码（本轮单一管理员） | `.dev.vars` | `wrangler secret put ADMIN_PASSWORD` |
 | `AUTH_SECRET` | JWT 签名密钥，至少 32 字符 | `.dev.vars` | `wrangler secret put AUTH_SECRET` |
+| `AI_BASE_URL` / `AI_API_KEY` / `AI_MODEL` / `AI_API_STYLE` | ②③ 轮 AI 网关（简答批改 / 学习助手）；默认 Anthropic Messages 兼容 | `.dev.vars` | `wrangler secret put AI_API_KEY`（URL/MODEL 可入 vars 或 secret） |
+| `OCR_PROVIDER` / `OCR_SECRET_ID` / `OCR_SECRET_KEY` / `OCR_REGION` | ⑤ 轮图片 OCR 切题（腾讯云）；未配置则导入功能提示未开通 | `.dev.vars` | `wrangler secret put OCR_SECRET_ID` 等 |
+
+> ②~⑥ 轮（AI 批改 / AI 助手 / 错题本+拍照 / OCR 导入 / 公告+CSV）的实现说明与逐项测试清单见
+> [`docs/superpowers/ROUNDS-2-7-HANDOFF.md`](docs/superpowers/ROUNDS-2-7-HANDOFF.md)。这些密钥仅经环境注入，绝不硬编码/入库/入日志。
 
 > **安全红线**：这两个值**绝不硬编码进代码、绝不提交进仓库、绝不写入任何日志**。`.dev.vars`、`.env*` 已在 `.gitignore` 中。服务端错误处理只记录错误摘要，不打印密钥或请求载荷；老师密码在登录接口内用常量时间比较，也不入日志。
 
