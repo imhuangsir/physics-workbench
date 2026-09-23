@@ -7,6 +7,8 @@ export class AppError extends Error {
 const CODE_STATUS: Record<string, number> = {
   unauthorized: 401, forbidden: 403, student_not_found: 404, duplicate_name: 409,
   session_revoked: 401, validation_error: 400, not_found: 404, conflict: 409,
+  ai_unconfigured: 503, ai_error: 502, ocr_unconfigured: 503, ocr_error: 502,
+  upload_error: 500, payload_too_large: 413,
 };
 
 export function ok<T>(data: T, status = 200): Response {

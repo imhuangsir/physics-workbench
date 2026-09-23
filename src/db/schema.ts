@@ -72,6 +72,10 @@ export const answers = sqliteTable("answers", {
   isCorrect: integer("is_correct"),
   score: real("score"),
   durationSec: integer("duration_sec"),
+  // ② 轮：简答题 AI/人工批改
+  aiFeedback: text("ai_feedback"),
+  gradedBy: text("graded_by", { enum: ["auto", "ai", "manual"] }),
+  gradedAt: integer("graded_at"),
 });
 
 export const loginLogs = sqliteTable("login_logs", {

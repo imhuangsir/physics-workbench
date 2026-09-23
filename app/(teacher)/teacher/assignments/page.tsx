@@ -83,9 +83,14 @@ export default function AssignmentsPage() {
                 <p className="font-medium">{a.title}</p>
                 <p className="text-xs text-muted-foreground">{fmtDue(a.dueAt)}</p>
               </div>
-              <Link href={`/teacher/assignments/${a.id}/stats`}>
-                <Button variant="outline" size="sm">查看统计</Button>
-              </Link>
+              <div className="flex gap-2">
+                <Link href={`/teacher/assignments/${a.id}/grade`}>
+                  <Button variant="outline" size="sm">批改简答</Button>
+                </Link>
+                <Link href={`/teacher/assignments/${a.id}/stats`}>
+                  <Button variant="outline" size="sm">查看统计</Button>
+                </Link>
+              </div>
             </CardContent>
           </Card>
         ))}

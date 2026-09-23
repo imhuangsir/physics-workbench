@@ -10,7 +10,7 @@ import { StatTile } from "@/components/ui/bento";
 type Ans = {
   questionId: number; type: string; stem: string;
   content: string | string[] | null; isCorrect: number | null; score: number | null;
-  answer: string | string[] | null; analysis: string | null; pending: boolean;
+  answer: string | string[] | null; analysis: string | null; aiFeedback: string | null; pending: boolean;
 };
 type Result = { status: string; objectiveScore: number | null; totalScore: number | null; durationSec: number | null; answers: Ans[] };
 
@@ -58,6 +58,9 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
             )}
             {a.analysis && (
               <p className="rounded-lg bg-muted p-3 text-muted-foreground"><b>解析：</b>{a.analysis}</p>
+            )}
+            {a.type === "short" && !a.pending && a.aiFeedback && (
+              <p className="soft-violet rounded-lg p-3"><b>老师/AI 评语：</b>{a.aiFeedback}</p>
             )}
           </CardContent>
         </Card>

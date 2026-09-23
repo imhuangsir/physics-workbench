@@ -77,11 +77,14 @@ export async function getResult(db: DB, assignmentId: number, studentId: number)
     status: sub.status, objectiveScore: sub.objectiveScore, totalScore: sub.totalScore, durationSec: sub.durationSec,
     answers: rows.map((r) => {
       const q = qMap.get(r.questionId)!;
+      const isShort = q.type === "short";
       return {
         questionId: r.questionId, type: q.type, stem: q.stem,
         content: JSON.parse(r.contentJson), isCorrect: r.isCorrect, score: r.score,
         answer: q.answerJson ? JSON.parse(q.answerJson) : null, // 结果页可看标准答案
-        analysis: q.analysis, pending: q.type === "short", // 简答待批改
+        analysis: q.analysis,
+        aiFeedback: r.aiFeedback, // ② 轮：简答 AI/人工评语
+        pending: isShort && !r.gradedBy, // 简答未批改前标记"待批改"
       };
     }),
   };
