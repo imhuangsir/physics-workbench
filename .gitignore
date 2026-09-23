@@ -9,6 +9,9 @@ out/
 # opennext / cloudflare
 .open-next/
 .wrangler/
+# 由 `npm run cf-typegen`（wrangler types）生成，含 workerd 运行时类型，不入库
+cloudflare-env.d.ts
+worker-configuration.d.ts
 
 # env / secrets
 .dev.vars
