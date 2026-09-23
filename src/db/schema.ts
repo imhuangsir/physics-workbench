@@ -85,3 +85,23 @@ export const loginLogs = sqliteTable("login_logs", {
   ua: text("ua"),
   createdAt: integer("created_at").notNull().$defaultFn(nowSec),
 });
+
+// ④ 轮：错题订正（含可选拍照，图片存 R2，仅存 key）
+export const corrections = sqliteTable("corrections", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  studentId: integer("student_id").notNull().references(() => students.id),
+  questionId: integer("question_id").notNull().references(() => questions.id),
+  assignmentId: integer("assignment_id").references(() => assignments.id),
+  text: text("text").notNull().default(""),
+  imageKey: text("image_key"),
+  createdAt: integer("created_at").notNull().$defaultFn(nowSec),
+});
+
+// ⑥ 轮：班级公告（classId 为空=全体班级）
+export const announcements = sqliteTable("announcements", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  title: text("title").notNull(),
+  body: text("body").notNull().default(""),
+  classId: integer("class_id").references(() => classes.id),
+  createdAt: integer("created_at").notNull().$defaultFn(nowSec),
+});
