@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "physics-workbench",
+  "main": ".open-next/worker.js",
+  "compatibility_date": "2025-03-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "d1_databases": [
+    { "binding": "DB", "database_name": "physics_workbench", "database_id": "PLACEHOLDER_RUN_wrangler_d1_create", "migrations_dir": "drizzle" }
+  ],
+  "r2_buckets": [
+    { "binding": "BUCKET", "bucket_name": "physics-workbench-uploads" }
+  ]
+}
