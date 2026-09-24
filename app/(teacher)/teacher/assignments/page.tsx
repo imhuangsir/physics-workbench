@@ -1,9 +1,11 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { api } from "@/lib/client/fetcher";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useChapters } from "@/components/chapter-select";
+import { UNCATEGORIZED, bucketOf } from "@/lib/chapters";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,11 +18,10 @@ type ClassRow = { id: number; name: string; count: number };
 type Question = { id: number; type: string; stem: string; chapter: string | null };
 type Picked = { questionId: number; score: number };
 
-function fmtDue(due: number | null) {
-  return due ? new Date(due * 1000).toLocaleString("zh-CN") : "无截止时间";
-}
+const fmtDue = (due: number | null) => (due ? new Date(due * 1000).toLocaleString("zh-CN") : "无截止时间");
 
 export default function AssignmentsPage() {
+  const { all: allChapters } = useChapters();
   const [list, setList] = useState<Assignment[]>([]);
   const [wizard, setWizard] = useState(false);
   const [classes, setClasses] = useState<ClassRow[]>([]);
@@ -29,27 +30,55 @@ export default function AssignmentsPage() {
   const [due, setDue] = useState("");
   const [classIds, setClassIds] = useState<number[]>([]);
   const [picked, setPicked] = useState<Picked[]>([]);
+  const [active, setActive] = useState<string | null>(null);
+  const [initialized, setInitialized] = useState<string[]>([]);
 
   function load() {
     api<Assignment[]>("/api/teacher/assignments").then(setList).catch((e) => toast.error(e instanceof Error ? e.message : "加载失败"));
   }
   useEffect(load, []);
 
+  const known = useMemo(() => new Set(allChapters), [allChapters]);
+  const chapterList = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const q of questions) { const b = bucketOf(q.chapter, known); counts[b] = (counts[b] ?? 0) + 1; }
+    const names = allChapters.filter((n) => (counts[n] ?? 0) > 0);
+    if ((counts[UNCATEGORIZED] ?? 0) > 0) names.push(UNCATEGORIZED);
+    return names.map((name) => ({ name, count: counts[name] }));
+  }, [questions, known, allChapters]);
+  const activeQuestions = useMemo(
+    () => (active == null ? [] : questions.filter((q) => bucketOf(q.chapter, known) === active)),
+    [active, questions, known],
+  );
+  const allActivePicked = activeQuestions.length > 0 && activeQuestions.every((q) => picked.some((x) => x.questionId === q.id));
+
   function openWizard() {
-    setTitle(""); setDue(""); setClassIds([]); setPicked([]); setWizard(true);
+    setTitle(""); setDue(""); setClassIds([]); setPicked([]); setActive(null); setInitialized([]); setWizard(true);
     api<ClassRow[]>("/api/teacher/classes").then(setClasses).catch(() => {});
     api<Question[]>("/api/teacher/questions").then(setQuestions).catch(() => {});
   }
 
+  function selectChapter(name: string) {
+    setActive(name);
+    if (!initialized.includes(name)) { // 首次进入该章：默认全选该章题目
+      const qs = questions.filter((q) => bucketOf(q.chapter, known) === name);
+      setPicked((p) => {
+        const have = new Set(p.map((x) => x.questionId));
+        return [...p, ...qs.filter((q) => !have.has(q.id)).map((q) => ({ questionId: q.id, score: 10 }))];
+      });
+      setInitialized((s) => [...s, name]);
+    }
+  }
   function togglePick(qid: number) {
-    setPicked((p) => p.some((x) => x.questionId === qid) ? p.filter((x) => x.questionId !== qid) : [...p, { questionId: qid, score: 10 }]);
+    setPicked((p) => (p.some((x) => x.questionId === qid) ? p.filter((x) => x.questionId !== qid) : [...p, { questionId: qid, score: 10 }]));
   }
-  function setScore(qid: number, score: number) {
-    setPicked((p) => p.map((x) => x.questionId === qid ? { ...x, score } : x));
+  function toggleAllActive() {
+    const ids = new Set(activeQuestions.map((q) => q.id));
+    if (allActivePicked) setPicked((p) => p.filter((x) => !ids.has(x.questionId)));
+    else setPicked((p) => { const have = new Set(p.map((x) => x.questionId)); return [...p, ...activeQuestions.filter((q) => !have.has(q.id)).map((q) => ({ questionId: q.id, score: 10 }))]; });
   }
-  function toggleClass(cid: number) {
-    setClassIds((c) => c.includes(cid) ? c.filter((x) => x !== cid) : [...c, cid]);
-  }
+  const setScore = (qid: number, score: number) => setPicked((p) => p.map((x) => (x.questionId === qid ? { ...x, score } : x)));
+  const toggleClass = (cid: number) => setClassIds((c) => (c.includes(cid) ? c.filter((x) => x !== cid) : [...c, cid]));
 
   async function create() {
     if (!title.trim()) return toast.error("请填写作业标题");
@@ -67,7 +96,6 @@ export default function AssignmentsPage() {
     } catch (e) { toast.error(e instanceof Error ? e.message : "创建失败"); }
   }
 
-  // PLACEHOLDER_JSX
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -84,12 +112,8 @@ export default function AssignmentsPage() {
                 <p className="text-xs text-muted-foreground">{fmtDue(a.dueAt)}</p>
               </div>
               <div className="flex gap-2">
-                <Link href={`/teacher/assignments/${a.id}/grade`}>
-                  <Button variant="outline" size="sm">批改简答</Button>
-                </Link>
-                <Link href={`/teacher/assignments/${a.id}/stats`}>
-                  <Button variant="outline" size="sm">查看统计</Button>
-                </Link>
+                <Link href={`/teacher/assignments/${a.id}/grade`}><Button variant="outline" size="sm">批改简答</Button></Link>
+                <Link href={`/teacher/assignments/${a.id}/stats`}><Button variant="outline" size="sm">查看统计</Button></Link>
               </div>
             </CardContent>
           </Card>
@@ -109,33 +133,46 @@ export default function AssignmentsPage() {
             <div className="flex flex-wrap gap-2">
               {classes.map((c) => (
                 <button key={c.id} type="button" onClick={() => toggleClass(c.id)}
-                  className={"rounded-lg border px-3 py-1.5 text-sm " + (classIds.includes(c.id) ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent")}>
-                  {c.name}
-                </button>
+                  className={"rounded-lg border px-3 py-1.5 text-sm " + (classIds.includes(c.id) ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent")}>{c.name}</button>
               ))}
               {classes.length === 0 && <span className="text-sm text-muted-foreground">暂无班级</span>}
             </div>
           </div>
 
-          <div className="space-y-1.5">
-            <Label>选题并设分值（勾选顺序即题号）</Label>
-            <div className="max-h-64 space-y-2 overflow-y-auto rounded-lg border p-2">
-              {questions.map((q) => {
-                const pk = picked.find((x) => x.questionId === q.id);
-                return (
-                  <div key={q.id} className="flex items-center gap-2">
-                    <input type="checkbox" checked={!!pk} onChange={() => togglePick(q.id)} />
-                    <Badge variant="neutral">{TYPE_LABEL[q.type] ?? q.type}</Badge>
-                    <span className="min-w-0 flex-1 truncate text-sm">{q.stem}</span>
-                    {pk && (
-                      <Input type="number" min={0} value={pk.score} onChange={(e) => setScore(q.id, Number(e.target.value))} className="w-20" />
-                    )}
-                  </div>
-                );
-              })}
-              {questions.length === 0 && <p className="text-sm text-muted-foreground">题库为空，请先到题库添加题目</p>}
+          <div className="space-y-2">
+            <Label>选择章节（先选章节，再勾选题目，默认全选）</Label>
+            <div className="flex flex-wrap gap-2">
+              {chapterList.map((c) => (
+                <button key={c.name} type="button" onClick={() => selectChapter(c.name)}
+                  className={"rounded-lg border px-3 py-1.5 text-sm " + (active === c.name ? "border-primary bg-primary/10 text-primary" : "hover:bg-accent")}>
+                  {c.name} · {c.count}
+                </button>
+              ))}
+              {chapterList.length === 0 && <span className="text-sm text-muted-foreground">题库为空，请先到题库添加题目</span>}
             </div>
-            <p className="text-xs text-muted-foreground">已选 {picked.length} 题</p>
+
+            {active && (
+              <div className="rounded-lg border p-2">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-sm font-medium">{active} · {activeQuestions.length} 题</span>
+                  <Button size="sm" variant="ghost" onClick={toggleAllActive}>{allActivePicked ? "全不选" : "全选"}</Button>
+                </div>
+                <div className="max-h-56 space-y-2 overflow-y-auto">
+                  {activeQuestions.map((q) => {
+                    const pk = picked.find((x) => x.questionId === q.id);
+                    return (
+                      <div key={q.id} className="flex items-center gap-2">
+                        <input type="checkbox" checked={!!pk} onChange={() => togglePick(q.id)} />
+                        <Badge variant="neutral">{TYPE_LABEL[q.type] ?? q.type}</Badge>
+                        <span className="min-w-0 flex-1 truncate text-sm">{q.stem}</span>
+                        {pk && <Input type="number" min={0} value={pk.score} onChange={(e) => setScore(q.id, Number(e.target.value))} className="w-20" />}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">已选 {picked.length} 题（可跨章节累加，勾选顺序即题号）</p>
           </div>
 
           <div className="flex justify-end gap-2">

@@ -4,6 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
+import { ChapterSelect } from "@/components/chapter-select";
 import type { QuestionInput } from "@/server/questions/validate";
 
 export const LETTERS = "ABCDEFGH".split("");
@@ -121,7 +122,7 @@ export function QuestionForm({ form, setForm, onSave, onCancel, saveLabel = "保
         </div>
       )}
       <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-1.5"><Label>章节</Label><Input value={form.chapter} onChange={(e) => setForm({ ...form, chapter: e.target.value })} /></div>
+        <div className="space-y-1.5"><Label>章节</Label><ChapterSelect value={form.chapter} onChange={(v) => setForm({ ...form, chapter: v })} /></div>
         <div className="space-y-1.5">
           <Label>难度</Label>
           <Select value={String(form.difficulty)} onChange={(e) => setForm({ ...form, difficulty: Number(e.target.value) })}>

@@ -18,6 +18,13 @@ export const students = sqliteTable("students", {
   createdAt: integer("created_at").notNull().$defaultFn(nowSec),
 }, (t) => ({ uniqNameLabel: unique().on(t.classId, t.name, t.dedupLabel) }));
 
+// 题库章节：内置6章为常量(见 src/lib/chapters.ts)，此表存老师自建的章节，按创建时间倒序排在内置章节之前
+export const chapters = sqliteTable("chapters", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  name: text("name").notNull().unique(),
+  createdAt: integer("created_at").notNull().$defaultFn(nowSec),
+});
+
 export const questions = sqliteTable("questions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   type: text("type", { enum: ["single", "multi", "fill", "short"] }).notNull(),
