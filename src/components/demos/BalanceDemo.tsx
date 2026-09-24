@@ -24,7 +24,8 @@ export function BalanceDemo() {
     const cv = canvasRef.current; if (!cv) return;
     const ctx = fitCanvas(cv, W, H);
     const { right: rt, rider: rd } = rr.current;
-    const target = Math.max(-0.3, Math.min(0.3, (rt - M) * 0.02));
+    // 倾角与质量差成正比：空盘时约 -0.3(物体侧到底)，每加一点砝码都会明显抬起一些
+    const target = Math.max(-0.31, Math.min(0.31, (rt - M) / M * 0.3));
     cur.current += (target - cur.current) * 0.15;
     const a = cur.current, ca = Math.cos(a), sa = Math.sin(a);
     ctx.fillStyle = "#f7f9fc"; ctx.fillRect(0, 0, W, H);

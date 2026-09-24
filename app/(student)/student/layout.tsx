@@ -43,7 +43,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className="min-h-dvh bg-background">
+    <div className="relative isolate min-h-dvh bg-background">
       <PhysicsDecor />
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">

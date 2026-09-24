@@ -17,45 +17,50 @@ const M: Record<string, React.ReactNode> = {
   spring: (<svg width="40" height="60" viewBox="0 0 40 60" {...P}><path d="M20 2 V8 L10 13 L30 19 L10 25 L30 31 L20 36" /><rect x="8" y="38" width="24" height="16" rx="3" /></svg>),
 };
 
-type Item = { k: string; top: string; off: number; rot: number; sc: number; op: number };
-const LEFT: Item[] = [
-  { k: "lensC", top: "5%", off: 18, rot: -8, sc: 1, op: 0.18 },
-  { k: "wave", top: "15%", off: 66, rot: 6, sc: 0.9, op: 0.14 },
-  { k: "v = λf", top: "24%", off: 22, rot: -5, sc: 1, op: 0.2 },
-  { k: "mirror", top: "34%", off: 58, rot: 9, sc: 1, op: 0.15 },
-  { k: "thermo", top: "46%", off: 20, rot: -12, sc: 1.1, op: 0.18 },
-  { k: "atom", top: "57%", off: 62, rot: 0, sc: 0.8, op: 0.13 },
-  { k: "ruler", top: "68%", off: 16, rot: 8, sc: 1, op: 0.16 },
-  { k: "vector", top: "79%", off: 56, rot: -14, sc: 1.1, op: 0.15 },
-  { k: "lensD", top: "89%", off: 24, rot: 6, sc: 0.95, op: 0.17 },
-];
-const RIGHT: Item[] = [
-  { k: "prism", top: "6%", off: 20, rot: 8, sc: 1, op: 0.18 },
-  { k: "ρ = m/V", top: "16%", off: 60, rot: 5, sc: 1, op: 0.2 },
-  { k: "magnet", top: "26%", off: 20, rot: -10, sc: 1, op: 0.16 },
-  { k: "wave", top: "38%", off: 62, rot: -6, sc: 0.85, op: 0.13 },
-  { k: "bulb", top: "49%", off: 22, rot: 6, sc: 1, op: 0.17 },
-  { k: "atom", top: "60%", off: 56, rot: 12, sc: 0.8, op: 0.13 },
-  { k: "λ", top: "70%", off: 26, rot: -6, sc: 1, op: 0.18 },
-  { k: "spring", top: "80%", off: 58, rot: 4, sc: 1, op: 0.15 },
-  { k: "lensC", top: "90%", off: 18, rot: -8, sc: 0.95, op: 0.17 },
+// 全屏散布：left/top 用百分比，错落分布覆盖整个背景
+type Item = { k: string; l: number; t: number; rot: number; sc: number; op: number };
+const ITEMS: Item[] = [
+  { k: "lensC", l: 3, t: 5, rot: -8, sc: 1, op: 0.12 },
+  { k: "wave", l: 25, t: 3, rot: 5, sc: 0.9, op: 0.1 },
+  { k: "prism", l: 50, t: 6, rot: 8, sc: 0.9, op: 0.1 },
+  { k: "v = λf", l: 73, t: 4, rot: -4, sc: 1, op: 0.13 },
+  { k: "atom", l: 90, t: 8, rot: 0, sc: 0.8, op: 0.1 },
+  { k: "ruler", l: 11, t: 19, rot: 8, sc: 1, op: 0.11 },
+  { k: "magnet", l: 39, t: 17, rot: -10, sc: 1, op: 0.1 },
+  { k: "bulb", l: 63, t: 20, rot: 6, sc: 1, op: 0.11 },
+  { k: "λ", l: 87, t: 22, rot: -6, sc: 1, op: 0.12 },
+  { k: "spring", l: 4, t: 35, rot: 4, sc: 1, op: 0.1 },
+  { k: "lensD", l: 29, t: 33, rot: 6, sc: 0.95, op: 0.11 },
+  { k: "wave", l: 55, t: 36, rot: -6, sc: 0.85, op: 0.09 },
+  { k: "thermo", l: 79, t: 34, rot: -12, sc: 1.1, op: 0.11 },
+  { k: "ρ = m/V", l: 13, t: 49, rot: -5, sc: 1, op: 0.13 },
+  { k: "mirror", l: 43, t: 51, rot: 9, sc: 1, op: 0.1 },
+  { k: "atom", l: 69, t: 49, rot: 12, sc: 0.8, op: 0.09 },
+  { k: "vector", l: 90, t: 52, rot: -14, sc: 1.1, op: 0.11 },
+  { k: "prism", l: 7, t: 65, rot: 8, sc: 0.9, op: 0.1 },
+  { k: "lensC", l: 33, t: 67, rot: -8, sc: 0.95, op: 0.11 },
+  { k: "bulb", l: 59, t: 65, rot: 6, sc: 1, op: 0.1 },
+  { k: "ruler", l: 83, t: 66, rot: 8, sc: 1, op: 0.11 },
+  { k: "wave", l: 17, t: 81, rot: 6, sc: 0.9, op: 0.1 },
+  { k: "v = s/t", l: 45, t: 83, rot: -4, sc: 1, op: 0.12 },
+  { k: "magnet", l: 71, t: 81, rot: -10, sc: 1, op: 0.1 },
+  { k: "atom", l: 90, t: 84, rot: 0, sc: 0.8, op: 0.09 },
+  { k: "thermo", l: 5, t: 91, rot: -12, sc: 1, op: 0.1 },
+  { k: "spring", l: 37, t: 92, rot: 4, sc: 1, op: 0.1 },
+  { k: "λ", l: 63, t: 91, rot: -6, sc: 1, op: 0.12 },
+  { k: "lensD", l: 87, t: 92, rot: 6, sc: 0.95, op: 0.11 },
 ];
 
-function render(items: Item[], side: "left" | "right") {
-  return items.map((it, i) => (
-    <span key={side + i} className="absolute font-mono text-base tracking-wide"
-      style={{ top: it.top, [side]: it.off, transform: `rotate(${it.rot}deg) scale(${it.sc})`, opacity: it.op }}>
-      {M[it.k] ?? it.k}
-    </span>
-  ));
-}
-
-/** 电脑端(xl+)两侧留白处散布的物理主题点缀；手机/窄屏隐藏，pointer-events-none 不挡交互。 */
+/** 全屏背景物理主题点缀：置于内容之后(-z-10)，仅在内容留白处透出；手机端(< md)隐藏。 */
 export function PhysicsDecor() {
   return (
-    <div aria-hidden className="pointer-events-none fixed inset-0 z-0 hidden select-none text-violet-500 xl:block dark:text-violet-300">
-      {render(LEFT, "left")}
-      {render(RIGHT, "right")}
+    <div aria-hidden className="pointer-events-none fixed inset-0 -z-10 hidden select-none overflow-hidden text-violet-500 md:block dark:text-violet-300">
+      {ITEMS.map((it, i) => (
+        <span key={i} className="absolute font-mono text-base tracking-wide"
+          style={{ top: `${it.t}%`, left: `${it.l}%`, transform: `rotate(${it.rot}deg) scale(${it.sc})`, opacity: it.op }}>
+          {M[it.k] ?? it.k}
+        </span>
+      ))}
     </div>
   );
 }
