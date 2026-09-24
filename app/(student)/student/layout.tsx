@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, ClipboardList, BookMarked, Sparkles, BarChart3 } from "lucide-react";
+import { LogOut, ClipboardList, BookMarked, Sparkles, BarChart3, FlaskConical } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getSession, clearSession } from "@/lib/client/auth";
@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 
 const NAV = [
   { href: "/student", label: "作业", icon: ClipboardList },
+  { href: "/student/demos", label: "物理演示", icon: FlaskConical },
   { href: "/student/report", label: "学习报告", icon: BarChart3 },
   { href: "/student/wrong-questions", label: "错题本", icon: BookMarked },
   { href: "/student/assistant", label: "AI 助手", icon: Sparkles },
