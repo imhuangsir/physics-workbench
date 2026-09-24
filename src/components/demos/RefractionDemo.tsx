@@ -40,7 +40,7 @@ export function RefractionDemo() {
 
     // 角弧 + 标注
     ctx.strokeStyle = C.amber; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(CX, IY, 34, -Math.PI / 2 - r1, -Math.PI / 2); ctx.stroke();
-    ctx.strokeStyle = C.blue; ctx.beginPath(); ctx.arc(CX, IY, 34, Math.PI / 2, Math.PI / 2 + r2); ctx.stroke();
+    ctx.strokeStyle = C.blue; ctx.beginPath(); ctx.arc(CX, IY, 34, Math.PI / 2 - r2, Math.PI / 2); ctx.stroke();
     ctx.fillStyle = C.ink; ctx.beginPath(); ctx.arc(CX, IY, 3.2, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = C.amber; ctx.font = "700 13px system-ui"; ctx.fillText(`入射角 ${deg}°`, 60, 44);
     ctx.fillStyle = C.blue; ctx.fillText(`折射角 ${Math.round(r2 * 180 / Math.PI)}°`, W - 130, H - 16);
