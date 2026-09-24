@@ -6,7 +6,7 @@ import { formatDuration } from "@/components/timer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { SectionLabel, StatTile, ProgressBar, type Tone } from "@/components/ui/bento";
-import { getSession } from "@/lib/client/auth";
+import { downloadFile } from "@/lib/client/fetcher";
 
 type PerQ = { questionId: number; orderNo: number; answered: number; correctRate: number };
 type Stats = { assigned: number; submitted: number; progress: number; avgDurationSec: number; avgTotalScore: number; perQuestion: PerQ[] };
@@ -30,19 +30,8 @@ export default function StatsPage({ params }: { params: Promise<{ id: string }> 
   }, [assignmentId]);
 
   async function exportCsv() {
-    const token = getSession()?.token ?? "";
     try {
-      const res = await fetch(`/api/teacher/assignments/${assignmentId}/export`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error("导出失败");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `assignment-${assignmentId}-stats.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
+      await downloadFile(`/api/teacher/assignments/${assignmentId}/export`, `assignment-${assignmentId}-stats.csv`);
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "导出失败");
     }

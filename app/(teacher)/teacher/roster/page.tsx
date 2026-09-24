@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/client/fetcher";
+import { downloadFile } from "@/lib/client/fetcher";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -131,7 +132,13 @@ export default function RosterPage() {
               </Card>
 
               <Card>
-                <CardHeader><CardTitle className="text-base">学生（{students.length}）</CardTitle></CardHeader>
+                <CardHeader className="flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-base">学生（{students.length}）</CardTitle>
+                  <Button variant="outline" size="sm"
+                    onClick={() => downloadFile(`/api/teacher/classes/${selected}/wrong-export`, `class-${selected}-wrong.csv`).catch((e) => toast.error(e instanceof Error ? e.message : "导出失败"))}>
+                    导出高频错题
+                  </Button>
+                </CardHeader>
                 <CardContent className="space-y-2">
                   {students.map((s) => (
                     <div key={s.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">

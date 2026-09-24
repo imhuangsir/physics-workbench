@@ -38,3 +38,15 @@ export async function fetchImageUrl(key: string): Promise<string> {
   if (!res.ok) throw new Error("图片加载失败");
   return URL.createObjectURL(await res.blob());
 }
+
+/** 带鉴权拉取文件并触发浏览器下载（用于 CSV 导出，避免把 token 放进 URL）。 */
+export async function downloadFile(path: string, fallbackName: string): Promise<void> {
+  const s = getSession();
+  const res = await fetch(path, { headers: s?.token ? { Authorization: `Bearer ${s.token}` } : {} });
+  if (!res.ok) throw new Error("下载失败");
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = fallbackName; a.click();
+  URL.revokeObjectURL(url);
+}
