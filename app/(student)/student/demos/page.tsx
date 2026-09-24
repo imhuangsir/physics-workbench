@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { FlaskConical } from "lucide-react";
 import { SectionLabel } from "@/components/ui/bento";
+import { FadeIn } from "@/components/motion/fade-in";
 
 const CHAPTERS = [
   { n: 1, title: "机械运动", href: "/student/demos/ch1", tone: "soft-violet", ready: true, sub: "参照物 · 匀速与变速 · 刻度尺读数" },
@@ -20,7 +21,7 @@ export default function DemosIndex() {
         <p className="text-sm text-muted-foreground">按章节看物理现象的动画，拖一拖、点一点，边玩边理解。</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {CHAPTERS.map((c) => {
+        {CHAPTERS.map((c, i) => {
           const inner = (
             <div className={`flex h-full min-h-[128px] flex-col justify-between rounded-3xl p-5 shadow-soft ${c.tone} ${c.ready ? "transition hover:opacity-95" : "opacity-60"}`}>
               <div className="flex items-center justify-between">
@@ -34,9 +35,11 @@ export default function DemosIndex() {
               </div>
             </div>
           );
-          return c.ready && c.href
-            ? <Link key={c.n} href={c.href}>{inner}</Link>
-            : <div key={c.n}>{inner}</div>;
+          return (
+            <FadeIn key={c.n} delay={i * 0.05}>
+              {c.ready && c.href ? <Link href={c.href}>{inner}</Link> : inner}
+            </FadeIn>
+          );
         })}
       </div>
     </div>

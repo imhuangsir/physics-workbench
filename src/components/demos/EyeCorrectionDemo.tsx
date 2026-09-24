@@ -16,7 +16,7 @@ export function EyeCorrectionDemo() {
     const ctx = fitCanvas(cv, W, H);
     ctx.fillStyle = "#f7f9fc"; ctx.fillRect(0, 0, W, H);
     const fixed = mode === "正常" || glass;
-    const Fx = mode === "正常" ? RETX : fixed ? RETX : mode === "近视" ? EX + 4 : EX + ER + 44;
+    const Fx = mode === "正常" ? RETX : fixed ? RETX : mode === "近视" ? RETX - 26 : RETX + 28;
 
     // 眼球
     ctx.fillStyle = "#fdfdff"; ctx.strokeStyle = "#8fa3c4"; ctx.lineWidth = 2;

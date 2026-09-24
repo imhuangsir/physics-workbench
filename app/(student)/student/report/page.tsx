@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/client/fetcher";
+import { FadeIn } from "@/components/motion/fade-in";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SectionLabel, StatTile, ProgressBar, type Tone } from "@/components/ui/bento";
 
@@ -34,13 +35,16 @@ export default function ReportPage() {
     <div className="space-y-6">
       <SectionLabel>学习报告 · 知识点掌握</SectionLabel>
 
-      <div className="grid grid-cols-3 gap-3">
-        <StatTile tone="blue" value={r.assignmentsDone} label="完成作业" />
-        <StatTile tone="violet" value={r.total} label="已答题（客观+已批）" />
-        <StatTile tone={rateTone(r.accuracy)} value={`${Math.round(r.accuracy * 100)}%`} label="总正确率" />
-      </div>
+      <FadeIn>
+        <div className="grid grid-cols-3 gap-3">
+          <StatTile tone="blue" value={r.assignmentsDone} label="完成作业" />
+          <StatTile tone="violet" value={r.total} label="已答题（客观+已批）" />
+          <StatTile tone={rateTone(r.accuracy)} value={`${Math.round(r.accuracy * 100)}%`} label="总正确率" />
+        </div>
+      </FadeIn>
 
       {r.weak.length > 0 && (
+        <FadeIn delay={0.05}>
         <Card>
           <CardHeader><CardTitle className="text-base">薄弱项 · 建议重点复习</CardTitle></CardHeader>
           <CardContent className="flex flex-wrap gap-2">
@@ -51,8 +55,10 @@ export default function ReportPage() {
             ))}
           </CardContent>
         </Card>
+        </FadeIn>
       )}
 
+      <FadeIn delay={0.1}>
       <Card>
         <CardHeader><CardTitle className="text-base">按章节</CardTitle></CardHeader>
         <CardContent className="space-y-3">
@@ -67,8 +73,10 @@ export default function ReportPage() {
           ))}
         </CardContent>
       </Card>
+      </FadeIn>
 
       {r.byTag.length > 0 && (
+        <FadeIn delay={0.15}>
         <Card>
           <CardHeader><CardTitle className="text-base">按知识点</CardTitle></CardHeader>
           <CardContent className="space-y-3">
@@ -83,6 +91,7 @@ export default function ReportPage() {
             ))}
           </CardContent>
         </Card>
+        </FadeIn>
       )}
     </div>
   );

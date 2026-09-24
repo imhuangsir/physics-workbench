@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { api, uploadImage, compressImage } from "@/lib/client/fetcher";
+import { FadeIn } from "@/components/motion/fade-in";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -62,8 +63,9 @@ export default function WrongQuestionsPage() {
   return (
     <div className="space-y-4">
       <SectionLabel>错题本 · 订正与巩固</SectionLabel>
-      {items.map((w) => (
-        <Card key={keyOf(w)}>
+      {items.map((w, i) => (
+        <FadeIn key={keyOf(w)} delay={i * 0.04}>
+        <Card>
           <CardHeader className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="danger">{TYPE[w.type] ?? w.type}</Badge>
@@ -102,6 +104,7 @@ export default function WrongQuestionsPage() {
             )}
           </CardContent>
         </Card>
+        </FadeIn>
       ))}
     </div>
   );

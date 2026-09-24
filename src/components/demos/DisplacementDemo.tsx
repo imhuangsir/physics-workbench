@@ -23,10 +23,11 @@ export function DisplacementDemo() {
     a.sy += ((ins ? y(V1) + 30 : 16) - a.sy) * 0.14;
     ctx.fillStyle = "#f7f9fc"; ctx.fillRect(0, 0, W, H);
 
-    // 石块（先画，后被水覆盖显出"浸没"）
-    const scx = (XL + XR) / 2;
+    // 石块（先画，后被水覆盖显出"浸没"）；大小随物体体积变化
+    const scx = (XL + XR) / 2, k = 0.6 + (vo - 10) / 40 * 0.9;
     ctx.fillStyle = "#8a94a6"; ctx.beginPath();
-    ctx.moveTo(scx - 22, a.sy); ctx.lineTo(scx + 6, a.sy - 12); ctx.lineTo(scx + 24, a.sy + 6); ctx.lineTo(scx + 12, a.sy + 24); ctx.lineTo(scx - 16, a.sy + 20); ctx.closePath(); ctx.fill();
+    ([[-22, 0], [6, -12], [24, 6], [12, 24], [-16, 20]] as const).forEach(([dx, dy], i) => { const x = scx + dx * k, yy = a.sy + dy * k; i === 0 ? ctx.moveTo(x, yy) : ctx.lineTo(x, yy); });
+    ctx.closePath(); ctx.fill();
 
     // 水
     ctx.fillStyle = "rgba(90,160,230,0.72)"; ctx.fillRect(XL + 2, y(a.level), XR - XL - 4, YB - y(a.level));

@@ -7,6 +7,7 @@ import { usePathname } from "next/navigation";
 import { getSession, clearSession } from "@/lib/client/auth";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { PhysicsDecor } from "@/components/ui/physics-decor";
 import { cn } from "@/lib/utils";
 
 const NAV = [
@@ -43,6 +44,7 @@ export default function StudentLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-dvh bg-background">
+      <PhysicsDecor />
       <header className="sticky top-0 z-10 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
           <span className="font-semibold">我的作业{name ? ` · ${name}` : ""}</span>
