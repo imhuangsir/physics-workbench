@@ -18,11 +18,11 @@ export default function Chapter1Demos() {
         <p className="text-sm text-muted-foreground">运动的描述、参照物、匀速与变速、长度测量与误差。</p>
       </div>
 
-      <DemoCard title="参照物与相对运动" tag="运动的描述" desc="选择不同的参照物，看看同一辆车是「运动」还是「静止」。">
+      <DemoCard title="参照物与相对运动" tag="运动的描述" desc="上下两个画面同时看：路边看车在动，车里看车没动。">
         <ReferenceFrameDemo />
       </DemoCard>
 
-      <DemoCard title="匀速直线运动 vs 变速直线运动" tag="运动的图像 · 速度" desc="对比每秒落点的疏密，以及 s-t 图像是直线还是曲线。">
+      <DemoCard title="匀速 vs 变速直线运动" tag="速度 · 快慢变化" desc="盯着速度计：匀速的数字不变，变速(加速)的数字一路往上涨。">
         <MotionTypesDemo />
       </DemoCard>
 
