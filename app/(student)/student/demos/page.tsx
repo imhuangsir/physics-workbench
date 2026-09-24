@@ -8,7 +8,7 @@ const CHAPTERS = [
   { n: 2, title: "声现象", href: "/student/demos/ch2", tone: "soft-blue", ready: true, sub: "振动发声 · 传播 · 音调响度音色" },
   { n: 3, title: "物态变化", href: "/student/demos/ch3", tone: "soft-emerald", ready: true, sub: "熔化沸腾 · 汽化液化 · 升华凝华" },
   { n: 4, title: "光现象", href: "/student/demos/ch4", tone: "soft-amber", ready: true, sub: "反射 · 折射 · 平面镜成像" },
-  { n: 5, title: "透镜及其应用", tone: "soft-rose", ready: false, sub: "凸透镜成像规律 · 眼睛与相机" },
+  { n: 5, title: "透镜及其应用", href: "/student/demos/ch5", tone: "soft-rose", ready: true, sub: "凸透镜成像规律 · 眼睛与相机" },
   { n: 6, title: "质量与密度", tone: "soft-violet", ready: false, sub: "质量 · 密度 · 测量" },
 ];
 
