@@ -18,7 +18,7 @@ export default function Chapter1Demos() {
         <p className="text-sm text-muted-foreground">运动的描述、参照物、匀速与变速、长度测量与误差。</p>
       </div>
 
-      <DemoCard title="参照物与相对运动" tag="运动的描述" desc="上下两个画面同时看：路边看车在动，车里看车没动。">
+      <DemoCard title="参照物与相对运动" tag="运动的描述" desc="切换参照物（地面/小车/云），看同一辆车是「运动」还是「静止」（循环播放）。">
         <ReferenceFrameDemo />
       </DemoCard>
 
