@@ -4,7 +4,7 @@ import { useReducedMotion } from "framer-motion";
 import { fitCanvas, useRafLoop, C } from "./canvas";
 import { Button } from "@/components/ui/button";
 
-const W = 560, H = 200, START = 118, END = 532, K = 0.075, TSTOP = 4.4;
+const W = 560, H = 200, START = 118, END = 532, K = 0.25, TSTOP = 5.2;
 const MEDIA = [
   { name: "钢铁", v: 5000, color: C.emerald },
   { name: "水", v: 1500, color: C.blue },
