@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { api, uploadImage } from "@/lib/client/fetcher";
+import { api, uploadImage, compressImage } from "@/lib/client/fetcher";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -45,7 +45,7 @@ export default function WrongQuestionsPage() {
     setBusy(true);
     try {
       let imageKey: string | null = null;
-      if (file) imageKey = (await uploadImage(file)).key;
+      if (file) imageKey = (await uploadImage(await compressImage(file))).key;
       await api("/api/student/corrections", { method: "POST", body: JSON.stringify({
         questionId: w.questionId, assignmentId: w.assignmentId, text: text.trim(), imageKey,
       }) });

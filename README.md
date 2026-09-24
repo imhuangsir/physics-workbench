@@ -65,13 +65,13 @@ npm run db:migrate:remote  # 应用到线上 D1
 
 迁移文件在 `drizzle/`，`wrangler.jsonc` 的 `migrations_dir` 指向它。集成测试通过 `test/apply-migrations.ts` 在每个测试的隔离 D1 上自动应用同一批迁移。
 
-## R2
+## 图片存储（错题订正拍照）
 
-本轮仅预留绑定 `BUCKET`，不实际读写。需要时创建存储桶：
+学生订正上传的图片**默认存入 D1**（`uploads` 表，存压缩后 base64），**无需 R2、无需绑定信用卡**。前端上传前会等比压缩到约 1280px/JPEG，控制单张体积。
 
-```bash
-npx wrangler r2 bucket create physics-workbench-uploads
-```
+如果日后要改用 R2（图多、体积大时更划算）：在 `wrangler.jsonc` 加回 `r2_buckets` 绑定并创建桶
+（`npx wrangler r2 bucket create physics-workbench-uploads`），再把 `src/server/uploads/service.ts`
+切回 R2 实现即可（`BUCKET` 绑定已保留为可选）。
 
 ## 测试
 

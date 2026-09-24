@@ -22,10 +22,10 @@ export async function GET(req: Request, { params }: { params: Promise<{ key: str
       who = { studentId: await requireStudent(req, { db, secret: env.AUTH_SECRET }) };
     }
 
-    const obj = await getImage(env.BUCKET, key, who);
-    return new Response(obj.body, {
+    const obj = await getImage(db, key, who);
+    return new Response(obj.bytes as unknown as BodyInit, {
       headers: {
-        "content-type": obj.httpMetadata?.contentType ?? "application/octet-stream",
+        "content-type": obj.mime,
         "cache-control": "private, max-age=3600",
       },
     });

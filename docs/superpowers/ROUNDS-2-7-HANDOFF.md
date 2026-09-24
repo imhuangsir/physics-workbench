@@ -27,7 +27,7 @@ npm run dev                 # localhost:3000
   历史：CC 自带网关 `ps.air-outer.com` 是 agent 路由，对普通应用请求返回 `content-blocked 400`，不可用。
   **现状**：已换用用户 2026-09-24 提供的通用 Anthropic 兼容网关（model `claude-opus-4-8`），实测 ② AI 简答批改端到端跑通（演示数据 5/5 全部批改成功）。换供应商只改 `.dev.vars`，无需改代码。
 - **OCR（⑤）**：`.dev.vars` 里 `OCR_*` 留空 —— 去腾讯云开通 OCR 后填 `OCR_PROVIDER=tencent`、`OCR_SECRET_ID`、`OCR_SECRET_KEY`；未填时导入页会提示"未配置"。
-- **R2 拍照（④）**：本地 miniflare 自带 R2 模拟，`npm run dev` 即可测上传；线上需 `wrangler r2 bucket create physics-workbench-uploads`。
+- **R2 拍照（④）**：**图片默认存 D1**（`uploads` 表，压缩后 base64），无需 R2、无需绑卡；前端上传前等比压缩到 ~1280px/JPEG。已实测上传+读取 roundtrip 通过（字节一致）。如需改用 R2：加回 `wrangler.jsonc` 的 `r2_buckets` 绑定 + 建桶 + 把 `uploads/service.ts` 切回 R2（`BUCKET` 已保留为可选）。
 
 ## 安全说明
 

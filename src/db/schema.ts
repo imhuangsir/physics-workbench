@@ -105,3 +105,12 @@ export const announcements = sqliteTable("announcements", {
   classId: integer("class_id").references(() => classes.id),
   createdAt: integer("created_at").notNull().$defaultFn(nowSec),
 });
+
+// ④ 轮：图片存储（默认存 D1，避免 R2 需绑卡）。data 为压缩后图片的 base64。
+export const uploads = sqliteTable("uploads", {
+  key: text("key").primaryKey(),
+  studentId: integer("student_id").notNull().references(() => students.id),
+  mime: text("mime").notNull(),
+  data: text("data").notNull(),
+  createdAt: integer("created_at").notNull().$defaultFn(nowSec),
+});

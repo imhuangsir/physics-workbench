@@ -14,6 +14,6 @@ export async function POST(req: Request) {
     const contentType = req.headers.get("content-type") ?? "";
     if (!contentType.startsWith("image/")) throw appError("validation_error", "请以图片格式上传");
     const data = await req.arrayBuffer();
-    return ok(await putStudentImage(env.BUCKET, studentId, contentType, data), 201);
+    return ok(await putStudentImage(db, studentId, contentType, data), 201);
   } catch (e) { return fail(e); }
 }

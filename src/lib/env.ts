@@ -2,7 +2,7 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export interface AppEnv {
   DB: D1Database;
-  BUCKET: R2Bucket;
+  BUCKET?: R2Bucket; // 可选：默认图片存 D1；如启用 R2 再绑定
   AUTH_SECRET: string;
   ADMIN_PASSWORD: string;
   // ② ③ 轮 AI 网关（Anthropic Messages 兼容，来自 CC settings.json）。密钥仅经 .dev.vars/Secret 注入。

@@ -19,16 +19,44 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
 }
 
 /** 直传图片二进制到 R2（不经 JSON），返回存储 key。 */
-export async function uploadImage(file: File): Promise<{ key: string }> {
+export async function uploadImage(file: File | Blob): Promise<{ key: string }> {
   const s = getSession();
+  const type = (file as File).type || "image/jpeg";
   const res = await fetch("/api/student/uploads", {
     method: "POST",
-    headers: { "Content-Type": file.type, ...(s?.token ? { Authorization: `Bearer ${s.token}` } : {}) },
+    headers: { "Content-Type": type, ...(s?.token ? { Authorization: `Bearer ${s.token}` } : {}) },
     body: file,
   });
   const json = await res.json().catch(() => ({})) as { data?: { key: string }; error?: { message?: string } };
   if (!res.ok) throw new Error(json?.error?.message ?? "上传失败");
   return json.data as { key: string };
+}
+
+/** 浏览器端压缩图片（等比缩放 + JPEG），控制体积以便存入 D1。GIF 原样返回。 */
+export async function compressImage(file: File, maxDim = 1280, quality = 0.8): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/gif") return file;
+  try {
+    const dataUrl = await new Promise<string>((res, rej) => {
+      const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(file);
+    });
+    const img = await new Promise<HTMLImageElement>((res, rej) => {
+      const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl;
+    });
+    let { width, height } = img;
+    if (Math.max(width, height) > maxDim) {
+      const s = maxDim / Math.max(width, height);
+      width = Math.round(width * s); height = Math.round(height * s);
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(img, 0, 0, width, height);
+    const blob = await new Promise<Blob | null>((res) => canvas.toBlob(res, "image/jpeg", quality));
+    return blob ? new File([blob], "upload.jpg", { type: "image/jpeg" }) : file;
+  } catch {
+    return file;
+  }
 }
 
 /** 带鉴权拉取图片并生成 object URL（用后请 revoke）。 */
