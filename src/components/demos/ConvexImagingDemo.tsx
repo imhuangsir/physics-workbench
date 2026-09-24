@@ -43,16 +43,20 @@ export function ConvexImagingDemo() {
         L(A1, edge(A1, Fr.x - A1.x, Fr.y - A1.y), C.amber); L(A1, P, "#e3b778", true);
         L(T, edge(O, O.x - T.x, O.y - T.y), C.rose); L(O, P, "#f0a4b0", true);
       }
-      // 像
+      // 像（超出画面时只保留光线、不画箭头，避免溢出显示区）
       const icol = real ? C.emerald : "#7c93bd";
-      L({ x: xi, y: CY }, { x: xi, y: yi }, icol, !real);
-      ctx.fillStyle = icol; ctx.beginPath();
-      if (real) { ctx.moveTo(xi, yi + 2); ctx.lineTo(xi - 5, yi - 9); ctx.lineTo(xi + 5, yi - 9); }
-      else { ctx.moveTo(xi, yi - 2); ctx.lineTo(xi - 5, yi + 9); ctx.lineTo(xi + 5, yi + 9); }
-      ctx.closePath(); ctx.fill();
+      const onScreen = xi > 10 && xi < W - 10 && Math.abs(yi - CY) < H / 2 - 8;
+      if (onScreen) {
+        L({ x: xi, y: CY }, { x: xi, y: yi }, icol, !real);
+        ctx.fillStyle = icol; ctx.beginPath();
+        if (real) { ctx.moveTo(xi, yi + 2); ctx.lineTo(xi - 5, yi - 9); ctx.lineTo(xi + 5, yi - 9); }
+        else { ctx.moveTo(xi, yi - 2); ctx.lineTo(xi - 5, yi + 9); ctx.lineTo(xi + 5, yi + 9); }
+        ctx.closePath(); ctx.fill();
+      }
       const big = Math.abs(v) / u > 1;
       if (real) { nat = `倒立、${big ? "放大" : Math.abs(Math.abs(v) / u - 1) < 0.08 ? "等大" : "缩小"}的实像`; app = u > 2 * F ? "→ 照相机" : Math.abs(u - 2 * F) < 6 ? "" : "→ 投影仪"; }
       else { nat = "正立、放大的虚像"; app = "→ 放大镜"; }
+      if (!onScreen) nat += "（很大，超出画面）";
     }
     ctx.fillStyle = C.ink; ctx.font = "700 13px system-ui"; ctx.fillText(nat, 16, 24);
     ctx.fillStyle = C.violet; ctx.fillText(app, 16, 42);

@@ -1,16 +1,21 @@
 "use client";
 import { useEffect, useRef } from "react";
 
-/** 按设备像素比放大画布缓冲，返回以逻辑像素(w×h)为坐标系的 2D 上下文；CSS 自适应缩放。 */
+/** 按设备像素比放大画布缓冲，返回以逻辑像素(w×h)为坐标系的 2D 上下文；CSS 自适应缩放，桌面端可放大到 720px 且保持清晰。 */
 export function fitCanvas(canvas: HTMLCanvasElement, w: number, h: number): CanvasRenderingContext2D {
   const dpr = Math.min(window.devicePixelRatio || 1, 2);
-  canvas.width = Math.round(w * dpr);
-  canvas.height = Math.round(h * dpr);
   canvas.style.width = "100%";
-  canvas.style.maxWidth = w + "px";
+  canvas.style.maxWidth = "720px";
   canvas.style.height = "auto";
+  canvas.style.display = "block";
+  canvas.style.marginInline = "auto";
+  const cssW = Math.min(canvas.clientWidth || w, 760);
+  const bw = Math.max(1, Math.round(cssW * dpr));
+  const bh = Math.max(1, Math.round(bw * h / w));
+  if (canvas.width !== bw || canvas.height !== bh) { canvas.width = bw; canvas.height = bh; }
   const ctx = canvas.getContext("2d")!;
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const s = bw / w; // 逻辑坐标 0..w 映射到整个缓冲宽度
+  ctx.setTransform(s, 0, 0, s, 0, 0);
   return ctx;
 }
 

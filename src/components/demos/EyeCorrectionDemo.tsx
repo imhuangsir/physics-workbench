@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { fitCanvas, C } from "./canvas";
 import { Button } from "@/components/ui/button";
 
-const W = 560, H = 216, EX = 342, CY = 110, ER = 66, LX = EX - ER + 16, RETX = EX + ER - 10;
+const W = 560, H = 216, EX = 342, CY = 110, ER = 66, LX = EX - ER + 16, RETX = EX + ER - 4;
 type Mode = "正常" | "近视" | "远视";
 
 export function EyeCorrectionDemo() {
@@ -22,7 +22,7 @@ export function EyeCorrectionDemo() {
     ctx.fillStyle = "#fdfdff"; ctx.strokeStyle = "#8fa3c4"; ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(EX, CY, ER, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
     // 视网膜（后壁）
-    ctx.strokeStyle = C.rose; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(EX, CY, ER - 2, -0.7, 0.7); ctx.stroke();
+    ctx.strokeStyle = C.rose; ctx.lineWidth = 4; ctx.beginPath(); ctx.arc(EX, CY, ER - 4, -0.7, 0.7); ctx.stroke();
     ctx.fillStyle = C.rose; ctx.font = "11px system-ui"; ctx.fillText("视网膜", RETX - 6, CY - ER + 22);
     // 晶状体
     ctx.fillStyle = "rgba(59,130,246,0.2)"; ctx.strokeStyle = C.blue; ctx.lineWidth = 1.5;
@@ -64,7 +64,7 @@ export function EyeCorrectionDemo() {
         {(["正常", "近视", "远视"] as Mode[]).map((m) => (
           <Button key={m} size="sm" variant={mode === m ? "default" : "outline"} onClick={() => setMode(m)}>{m}眼</Button>
         ))}
-        <Button size="sm" variant={glass ? "default" : "outline"} disabled={mode === "正常"} onClick={() => setGlass((g) => !g)}>{glass ? "已戴矫正镜" : "未戴眼镜"}</Button>
+        <Button size="sm" variant={mode !== "正常" && glass ? "default" : "outline"} disabled={mode === "正常"} onClick={() => setGlass((g) => !g)}>{mode === "正常" ? "无需矫正镜" : glass ? "已戴矫正镜" : "未戴眼镜"}</Button>
       </div>
       <p className="text-xs text-muted-foreground"><b>近视眼</b>像成在视网膜<b>前</b>（眼球偏长），用<b>凹透镜</b>矫正；<b>远视眼</b>像成在视网膜<b>后</b>（眼球偏短），用<b>凸透镜</b>矫正。切换上面的按钮，戴/摘眼镜看焦点怎么移回视网膜。</p>
     </div>
