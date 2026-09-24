@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { LogOut, ClipboardList, BookMarked, Sparkles, BarChart3, FlaskConical } from "lucide-react";
+import { LogOut, ClipboardList, BookMarked, Sparkles, BarChart3, FlaskConical, Wrench } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getSession, clearSession } from "@/lib/client/auth";
@@ -16,6 +16,7 @@ const NAV = [
   { href: "/student/report", label: "学习报告", icon: BarChart3 },
   { href: "/student/wrong-questions", label: "错题本", icon: BookMarked },
   { href: "/student/assistant", label: "AI 助手", icon: Sparkles },
+  { href: "/student/tools", label: "实用小工具", icon: Wrench },
 ];
 
 export default function StudentLayout({ children }: { children: ReactNode }) {
