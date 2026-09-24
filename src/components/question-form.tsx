@@ -59,7 +59,7 @@ export function buildPayload(f: FormState): QuestionInput {
 // PLACEHOLDER_COMPONENT
 
 export function QuestionForm({ form, setForm, onSave, onCancel, saveLabel = "保存" }: {
-  form: FormState; setForm: (f: FormState) => void; onSave: () => void; onCancel?: () => void; saveLabel?: string;
+  form: FormState; setForm: (f: FormState) => void; onSave?: () => void; onCancel?: () => void; saveLabel?: string;
 }) {
   const isChoice = form.type === "single" || form.type === "multi";
   function setOpt(i: number, v: string) {
@@ -134,7 +134,7 @@ export function QuestionForm({ form, setForm, onSave, onCancel, saveLabel = "保
       <div className="space-y-1.5"><Label>解析（简答题此处作为 AI 批改参考要点）</Label><Textarea value={form.analysis} onChange={(e) => setForm({ ...form, analysis: e.target.value })} /></div>
       <div className="flex justify-end gap-2 pt-1">
         {onCancel && <Button variant="outline" onClick={onCancel}>取消</Button>}
-        <Button onClick={onSave}>{saveLabel}</Button>
+        {onSave && <Button onClick={onSave}>{saveLabel}</Button>}
       </div>
     </div>
   );

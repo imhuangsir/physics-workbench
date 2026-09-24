@@ -1,8 +1,8 @@
 "use client";
 import Link from "next/link";
-import { FlaskConical } from "lucide-react";
 import { SectionLabel } from "@/components/ui/bento";
 import { FadeIn } from "@/components/motion/fade-in";
+import { ChapterMotif } from "@/components/demos/ChapterMotif";
 
 const CHAPTERS = [
   { n: 1, title: "机械运动", href: "/student/demos/ch1", tone: "soft-violet", ready: true, sub: "参照物 · 匀速与变速 · 刻度尺读数" },
@@ -23,12 +23,13 @@ export default function DemosIndex() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {CHAPTERS.map((c, i) => {
           const inner = (
-            <div className={`flex h-full min-h-[128px] flex-col justify-between rounded-3xl p-5 shadow-soft ${c.tone} ${c.ready ? "transition hover:opacity-95" : "opacity-60"}`}>
-              <div className="flex items-center justify-between">
+            <div className={`relative flex h-full min-h-[128px] flex-col justify-between overflow-hidden rounded-3xl p-5 shadow-soft ${c.tone} ${c.ready ? "transition hover:opacity-95" : "opacity-60"}`}>
+              <ChapterMotif n={c.n} className="pointer-events-none absolute -bottom-4 -right-3 h-28 w-28 opacity-20" />
+              <div className="relative flex items-center justify-between">
                 <span className="text-sm font-semibold opacity-90">第 {c.n} 章</span>
-                <FlaskConical className="h-5 w-5 opacity-80" />
+                <ChapterMotif n={c.n} className="h-6 w-6 opacity-80" />
               </div>
-              <div>
+              <div className="relative">
                 <div className="text-xl font-extrabold tracking-tight">{c.title}</div>
                 <div className="mt-1 text-xs opacity-90">{c.sub}</div>
                 {!c.ready && <div className="mt-2 text-xs font-semibold">即将上线</div>}
