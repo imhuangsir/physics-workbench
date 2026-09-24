@@ -5,7 +5,7 @@ import { SectionLabel } from "@/components/ui/bento";
 
 const CHAPTERS = [
   { n: 1, title: "机械运动", href: "/student/demos/ch1", tone: "soft-violet", ready: true, sub: "参照物 · 匀速与变速 · 刻度尺读数" },
-  { n: 2, title: "声现象", tone: "soft-blue", ready: false, sub: "振动发声 · 传播 · 音调响度音色" },
+  { n: 2, title: "声现象", href: "/student/demos/ch2", tone: "soft-blue", ready: true, sub: "振动发声 · 传播 · 音调响度音色" },
   { n: 3, title: "物态变化", tone: "soft-emerald", ready: false, sub: "熔化沸腾 · 汽化液化 · 升华凝华" },
   { n: 4, title: "光现象", tone: "soft-amber", ready: false, sub: "反射 · 折射 · 平面镜成像" },
   { n: 5, title: "透镜及其应用", tone: "soft-rose", ready: false, sub: "凸透镜成像规律 · 眼睛与相机" },
