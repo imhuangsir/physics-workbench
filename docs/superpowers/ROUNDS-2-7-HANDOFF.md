@@ -23,7 +23,9 @@ npm run build               # 应已通过
 npm run dev                 # localhost:3000
 ```
 
-- **AI 功能（②③）**：`.dev.vars` 已按 CC settings.json 预填 `AI_BASE_URL/AI_MODEL/AI_API_STYLE/AI_API_KEY`，理论上开箱可测。若网关只认 OpenAI 格式，把 `AI_API_STYLE` 改成 `openai`。
+- **AI 功能（②③）**：`.dev.vars` 存放 `AI_BASE_URL/AI_MODEL/AI_API_STYLE/AI_API_KEY`（密钥不入库）。
+  历史：CC 自带网关 `ps.air-outer.com` 是 agent 路由，对普通应用请求返回 `content-blocked 400`，不可用。
+  **现状**：已换用用户 2026-09-24 提供的通用 Anthropic 兼容网关（model `claude-opus-4-8`），实测 ② AI 简答批改端到端跑通（演示数据 5/5 全部批改成功）。换供应商只改 `.dev.vars`，无需改代码。
 - **OCR（⑤）**：`.dev.vars` 里 `OCR_*` 留空 —— 去腾讯云开通 OCR 后填 `OCR_PROVIDER=tencent`、`OCR_SECRET_ID`、`OCR_SECRET_KEY`；未填时导入页会提示"未配置"。
 - **R2 拍照（④）**：本地 miniflare 自带 R2 模拟，`npm run dev` 即可测上传；线上需 `wrangler r2 bucket create physics-workbench-uploads`。
 
