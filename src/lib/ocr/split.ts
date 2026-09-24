@@ -6,7 +6,7 @@ export interface DraftQuestion {
 }
 
 const MARKER = /^\s*\(?\d{1,3}\)?\s*[.、．)]/; // 行首题号：1. / 1、/ 1) / (1)
-const OPT = /([A-H])\s*[.、．)]\s*([^\n]*)/g; // 选项：A. xxx
+const OPT = /([A-H])\s*[.、．)]\s*([\s\S]*?)(?=(?:[A-H]\s*[.、．)])|$)/g; // 选项：A. xxx（同行多选项也能拆）
 
 /** 把 OCR 整段文本按题号切分成草稿题目，并粗略判型（老师可再改）。 */
 export function splitQuestions(text: string): DraftQuestion[] {
