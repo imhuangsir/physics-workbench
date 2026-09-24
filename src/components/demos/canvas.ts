@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 
 /** 按设备像素比放大画布缓冲，返回以逻辑像素(w×h)为坐标系的 2D 上下文；CSS 自适应缩放，桌面端可放大到 720px 且保持清晰。 */
 export function fitCanvas(canvas: HTMLCanvasElement, w: number, h: number): CanvasRenderingContext2D {
@@ -19,12 +19,20 @@ export function fitCanvas(canvas: HTMLCanvasElement, w: number, h: number): Canv
   return ctx;
 }
 
-/** requestAnimationFrame 循环；playing=false 时停止。回调收到 (dtMs, tMs)。 */
-export function useRafLoop(cb: (dtMs: number, tMs: number) => void, playing: boolean) {
+/** requestAnimationFrame 循环；playing=false 时停止。传入 elRef 后，元素滚出视口时自动暂停(省电/避免离屏动画白跑)。回调收到 (dtMs, tMs)。 */
+export function useRafLoop(cb: (dtMs: number, tMs: number) => void, playing: boolean, elRef?: RefObject<HTMLElement | null>) {
   const cbRef = useRef(cb);
   cbRef.current = cb;
+  const [inView, setInView] = useState(true);
   useEffect(() => {
-    if (!playing) return;
+    const el = elRef?.current;
+    if (!el || typeof IntersectionObserver === "undefined") { setInView(true); return; }
+    const io = new IntersectionObserver((es) => setInView(es[0]?.isIntersecting ?? true), { threshold: 0.01 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [elRef]);
+  useEffect(() => {
+    if (!playing || !inView) return;
     let raf = 0;
     let last = performance.now();
     const tick = (now: number) => {
@@ -35,7 +43,7 @@ export function useRafLoop(cb: (dtMs: number, tMs: number) => void, playing: boo
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [playing]);
+  }, [playing, inView]);
 }
 
 /** 画布配色（自带背景，独立于明暗主题，作为"插图"呈现）。 */

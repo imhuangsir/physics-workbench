@@ -14,7 +14,7 @@ const MEDIA = [
 export function SoundSpeedDemo() {
   const reduce = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [playing, setPlaying] = useState(!reduce);
+  const [playing, setPlaying] = useState(false);
   const t = useRef(0);
 
   function render() {
@@ -39,7 +39,7 @@ export function SoundSpeedDemo() {
     ctx.fillStyle = C.muted; ctx.font = "12px system-ui"; ctx.fillText(`t = ${cur.toFixed(2)} s`, W - 84, 24);
   }
 
-  useRafLoop((dt) => { t.current += dt / 1000; if (t.current >= TSTOP) { t.current = TSTOP; setPlaying(false); } render(); }, playing);
+  useRafLoop((dt) => { t.current += dt / 1000; if (t.current >= TSTOP) { t.current = TSTOP; setPlaying(false); } render(); }, playing, canvasRef);
   useEffect(() => { render(); });
 
   return (

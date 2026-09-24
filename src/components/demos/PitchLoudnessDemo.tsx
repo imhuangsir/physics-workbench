@@ -34,7 +34,7 @@ export function PitchLoudnessDemo() {
     ctx.fillText(`响度（振幅）：${ar.current < 0.4 ? "小" : ar.current > 0.8 ? "大" : "中"}  越高越响`, X0, 44);
   }
 
-  useRafLoop((dt) => { p.current += dt / 1000 * 3; render(); }, !reduce);
+  useRafLoop((dt) => { p.current += dt / 1000 * 3; render(); }, !reduce, canvasRef);
   useEffect(() => { render(); });
 
   // 播放时随滑块实时更新音高/音量

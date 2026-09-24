@@ -53,7 +53,7 @@ export function SoundMediumDemo() {
     for (let i = s.rings.length - 1; i >= 0; i--) { s.rings[i] += 90 * f; if (s.rings[i] > reach) s.rings.splice(i, 1); }
     if (a > 0.02) { s.spawn += f; if (s.spawn > 0.6) { s.spawn = 0; s.rings.push(6); } } else s.rings.length = 0;
     render();
-  }, true);
+  }, true, canvasRef);
   useEffect(() => { render(); });
 
   return (

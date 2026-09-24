@@ -10,10 +10,7 @@ import { PitchLoudnessDemo } from "@/components/demos/PitchLoudnessDemo";
 import { TimbreDemo } from "@/components/demos/TimbreDemo";
 import { SoundUsesDemo } from "@/components/demos/SoundUsesDemo";
 import { NoiseDemo } from "@/components/demos/NoiseDemo";
-
-function Sec({ children }: { children: React.ReactNode }) {
-  return <div className="pt-1 text-sm font-bold text-foreground/70">{children}</div>;
-}
+import { SecLabel as Sec } from "@/components/demos/SecLabel";
 
 export default function Chapter2Demos() {
   return (

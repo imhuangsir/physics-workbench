@@ -27,7 +27,7 @@ function lane(ctx: CanvasRenderingContext2D, top: number, title: string, sub: st
 export function MotionTypesDemo() {
   const reduce = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [playing, setPlaying] = useState(!reduce);
+  const [playing, setPlaying] = useState(false);
   const st = useRef({ xA: TX, xB: TX, tR: 0 });
 
   function render() {
@@ -47,7 +47,7 @@ export function MotionTypesDemo() {
     const vB = Math.min(VBMAX, VB0 + ACC * s.tR);
     s.xB += vB * f; s.tR += f; if (s.xB > EX) { s.xB = TX - CARW; s.tR = 0; }
     render();
-  }, playing);
+  }, playing, canvasRef);
   useEffect(() => { render(); });
 
   return (

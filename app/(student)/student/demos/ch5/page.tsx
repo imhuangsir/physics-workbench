@@ -8,10 +8,7 @@ import { LifeLensesDemo } from "@/components/demos/LifeLensesDemo";
 import { ConvexImagingDemo } from "@/components/demos/ConvexImagingDemo";
 import { EyeCorrectionDemo } from "@/components/demos/EyeCorrectionDemo";
 import { TelescopeMicroscopeDemo } from "@/components/demos/TelescopeMicroscopeDemo";
-
-function Sec({ children }: { children: React.ReactNode }) {
-  return <div className="pt-1 text-sm font-bold text-foreground/70">{children}</div>;
-}
+import { SecLabel as Sec } from "@/components/demos/SecLabel";
 
 export default function Chapter5Demos() {
   return (

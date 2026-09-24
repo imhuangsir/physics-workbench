@@ -19,7 +19,7 @@ function tempAt(t: number, crystal: boolean) {
 export function MeltingCurveDemo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [crystal, setCrystal] = useState(true);
-  const [playing, setPlaying] = useState(true);
+  const [playing, setPlaying] = useState(false);
   const t = useRef(0);
   const cr = useRef(true); cr.current = crystal;
 
@@ -70,7 +70,7 @@ export function MeltingCurveDemo() {
     ctx.fillStyle = crys ? C.violet : C.amber; ctx.beginPath(); ctx.arc(gx(cur), gy(T), 5, 0, Math.PI * 2); ctx.fill();
   }
 
-  useRafLoop((dt) => { t.current += dt / 1000; if (t.current >= TSTOP) { t.current = TSTOP; setPlaying(false); } render(); }, playing);
+  useRafLoop((dt) => { t.current += dt / 1000; if (t.current >= TSTOP) { t.current = TSTOP; setPlaying(false); } render(); }, playing, canvasRef);
   useEffect(() => { render(); });
 
   return (

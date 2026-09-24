@@ -62,7 +62,7 @@ export function PhaseChangesDemo() {
     });
   }
 
-  useRafLoop((dt) => { const a = anim.current; a.t += dt / 1000; a.p = (a.p + dt / 1000 * 0.6) % 1; render(); }, true);
+  useRafLoop((dt) => { const a = anim.current; a.t += dt / 1000; a.p = (a.p + dt / 1000 * 0.6) % 1; render(); }, true, canvasRef);
   useEffect(() => { render(); });
 
   const pr = PROC[sel];

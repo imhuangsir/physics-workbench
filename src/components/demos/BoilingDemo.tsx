@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { fitCanvas, useRafLoop, C } from "./canvas";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +11,7 @@ type B = { x: number; y: number; r: number };
 
 export function BoilingDemo() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [playing, setPlaying] = useState(false);
   const st = useRef({ t: 0, spawn: 0, bubbles: [] as B[] });
 
   const tempAt = (t: number) => Math.min(100, 20 + (80 / T100) * t);
@@ -73,14 +74,15 @@ export function BoilingDemo() {
       if (b.y <= WSURF + 2 || b.r <= 0.5) s.bubbles.splice(i, 1);
     }
     render();
-  }, true);
+  }, playing, canvasRef);
   useEffect(() => { render(); });
 
   return (
     <div className="space-y-3">
       <canvas ref={canvasRef} className="rounded-2xl border border-border" />
       <div className="flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => { st.current.t = 0; st.current.bubbles = []; }}>▶ 重新加热</Button>
+        <Button size="sm" onClick={() => { st.current.t = 0; st.current.bubbles = []; setPlaying(true); }}>▶ 开始加热</Button>
+        {playing && <Button size="sm" variant="outline" onClick={() => setPlaying(false)}>暂停</Button>}
       </div>
       <p className="text-xs text-muted-foreground">给水持续加热，温度升到 <b>100℃</b> 开始沸腾；<b>沸腾时继续吸热，但温度保持不变</b>（曲线变平）。沸腾前气泡上升途中变小，沸腾时气泡上升途中变大。（标准大气压下水的沸点是 100℃）</p>
     </div>

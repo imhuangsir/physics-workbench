@@ -9,8 +9,8 @@ const W = 560, H = 220, MX = 130, MY = 110, MAXR = 250;
 export function SoundVibrationDemo() {
   const reduce = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [on, setOn] = useState(!reduce);
-  const onRef = useRef(true); onRef.current = on;
+  const [on, setOn] = useState(false);
+  const onRef = useRef(false); onRef.current = on;
   const st = useRef({ rings: [] as number[], spawn: 0, t: 0 });
 
   function render() {
@@ -39,7 +39,7 @@ export function SoundVibrationDemo() {
     for (let i = s.rings.length - 1; i >= 0; i--) { s.rings[i] += 150 * f; if (s.rings[i] > MAXR) s.rings.splice(i, 1); }
     if (onRef.current) { s.spawn += f; if (s.spawn > 0.5) { s.spawn = 0; s.rings.push(6); } }
     render();
-  }, true); // 一直跑，让停止后的波纹也能扩散消失
+  }, true, canvasRef); // 一直跑，让停止后的波纹也能扩散消失
 
   useEffect(() => { render(); });
 

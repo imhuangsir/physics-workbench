@@ -38,7 +38,7 @@ export function TimbreDemo() {
     ctx.fillStyle = C.ink; ctx.font = "700 13px system-ui"; ctx.fillText(`${TIMBRES[sr.current].name}：音调、响度相同，波形（音色）不同`, X0, 24);
   }
 
-  useRafLoop((dt) => { p.current += (dt / 1000) * 3; render(); }, !reduce);
+  useRafLoop((dt) => { p.current += (dt / 1000) * 3; render(); }, !reduce, canvasRef);
   useEffect(() => { render(); });
   useEffect(() => () => { try { audio.current?.osc.stop(); audio.current?.ctx.close(); } catch { /* noop */ } }, []);
 

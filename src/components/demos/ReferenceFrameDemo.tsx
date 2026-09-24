@@ -34,7 +34,7 @@ export function ReferenceFrameDemo() {
   const reduce = useReducedMotion();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [ref, setRef] = useState<RefObj>("ground");
-  const [playing, setPlaying] = useState(!reduce);
+  const [playing, setPlaying] = useState(false);
   const refCur = useRef<RefObj>("ground"); refCur.current = ref;
   const w = useRef({ car: 0, cloud: 0 });
 
@@ -57,7 +57,7 @@ export function ReferenceFrameDemo() {
     ctx.fillText(`云：${dir(V.cloud - vr)}    树木/地面：${dir(0 - vr)}`, 20, 70);
   }
 
-  useRafLoop((dt) => { const f = dt / 1000; w.current.car += V.car * f; w.current.cloud += V.cloud * f; render(); }, playing);
+  useRafLoop((dt) => { const f = dt / 1000; w.current.car += V.car * f; w.current.cloud += V.cloud * f; render(); }, playing, canvasRef);
   useEffect(() => { render(); });
 
   return (

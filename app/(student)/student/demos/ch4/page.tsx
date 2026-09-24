@@ -8,10 +8,7 @@ import { ReflectionDemo } from "@/components/demos/ReflectionDemo";
 import { PlaneMirrorDemo } from "@/components/demos/PlaneMirrorDemo";
 import { RefractionDemo } from "@/components/demos/RefractionDemo";
 import { DispersionDemo } from "@/components/demos/DispersionDemo";
-
-function Sec({ children }: { children: React.ReactNode }) {
-  return <div className="pt-1 text-sm font-bold text-foreground/70">{children}</div>;
-}
+import { SecLabel as Sec } from "@/components/demos/SecLabel";
 
 export default function Chapter4Demos() {
   return (

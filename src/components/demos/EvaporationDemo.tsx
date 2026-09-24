@@ -61,7 +61,7 @@ export function EvaporationDemo() {
     if (s.spawn > iv) { s.spawn = 0; s.ps.push({ x: CX - swid / 2 + Math.random() * swid, y: SURF - 2, vx: wd * 46 + Math.random() * 10, vy: -(24 + rt * 70 + Math.random() * 20) }); }
     for (let i = s.ps.length - 1; i >= 0; i--) { const p = s.ps[i]; p.x += p.vx * f; p.y += p.vy * f; if (p.y < 30 || p.x > W) s.ps.splice(i, 1); }
     render();
-  }, true);
+  }, true, canvasRef);
   useEffect(() => { render(); });
 
   const Row = ({ label, v, set, lo, hi }: { label: string; v: number; set: (n: number) => void; lo: string; hi: string }) => (

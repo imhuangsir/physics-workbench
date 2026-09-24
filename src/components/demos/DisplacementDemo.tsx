@@ -48,7 +48,7 @@ export function DisplacementDemo() {
     ctx.fillStyle = C.muted; ctx.font = "12px system-ui"; ctx.fillText("（1 mL = 1 cm³）", 300, 148);
   }
 
-  useRafLoop(() => render(), true);
+  useRafLoop(() => render(), true, canvasRef);
   useEffect(() => { render(); });
 
   return (

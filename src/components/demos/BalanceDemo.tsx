@@ -58,7 +58,7 @@ export function BalanceDemo() {
     ctx.fillStyle = C.muted; ctx.font = "12px system-ui"; ctx.fillText(`右盘合计：${rt.toFixed(1)} g`, 16, 44);
   }
 
-  useRafLoop(() => render(), true);
+  useRafLoop(() => render(), true, canvasRef);
   useEffect(() => { render(); });
 
   return (
