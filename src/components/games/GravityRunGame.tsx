@@ -30,9 +30,10 @@ export function GravityRunGame() {
   const [score, setScore] = useState(0);
   const [best, setBest] = useState(0);
   const [gems, setGems] = useState(0);
+  const [err, setErr] = useState<string | null>(null);
   const st = useRef<S>(fresh());
 
-  function reset() { st.current = fresh(); setScore(0); setGems(0); setOver(false); }
+  function reset() { st.current = fresh(); setScore(0); setGems(0); setOver(false); setErr(null); }
   function spawnOb() {
     const s = st.current;
     const avail = UNLOCK.filter((u) => s.dist >= u.at);
@@ -69,6 +70,7 @@ export function GravityRunGame() {
 
   useRafLoop((dt) => {
     const s = st.current, f = Math.min(dt / 1000, 0.033);
+    try {
     s.inv = Math.max(0, s.inv - f); s.star = Math.max(0, s.star - f); s.slow = Math.max(0, s.slow - f); s.boost = Math.max(0, s.boost - f);
     const base = 230 + s.dist * 0.028;
     s.spd = Math.min(540, base * (s.star > 0 ? 1.4 : 1) * (s.boost > 0 ? 1.45 : 1) * (s.slow > 0 ? 0.5 : 1));
@@ -90,8 +92,9 @@ export function GravityRunGame() {
       if (hit(s.y, box(o))) { if (s.star > 0) { o.dead = true; spark("#fbbf24"); } else takeHit(); }
     }
     render();
+    } catch (e) { console.error("[GravityRun] frame error:", e); setPlaying(false); setErr(String((e as Error)?.message || e)); }
   }, playing, canvasRef);
-  useEffect(() => { render(); });
+  useEffect(() => { if (err) return; try { render(); } catch (e) { console.error("[GravityRun] render error:", e); setErr(String((e as Error)?.message || e)); } });
 
   function render() {
     const cv = canvasRef.current; if (!cv) return;
@@ -116,6 +119,7 @@ export function GravityRunGame() {
       <div className="relative mx-auto w-full max-w-[720px]">
         <canvas ref={canvasRef} onClick={tap} className="w-full cursor-pointer rounded-2xl border border-border" />
         {over && (<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/80"><p className="text-lg font-bold">撞毁了！跑了 {score} m</p><button className="rounded-lg bg-foreground px-4 py-1.5 text-sm font-semibold text-background" onClick={tap}>再来一局</button></div>)}
+        {err && (<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/90 p-4 text-center"><p className="text-sm font-semibold">游戏出了点问题</p><p className="max-w-[90%] break-words text-xs text-muted-foreground">{err}</p><button className="rounded-lg bg-foreground px-4 py-1.5 text-sm font-semibold text-background" onClick={() => { reset(); setPlaying(true); }}>重试</button></div>)}
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">距离 <b className="num">{score}</b> m</div>
@@ -235,28 +239,35 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item) {
 }
 /*__G__*/
 function drawLeg(ctx: CanvasRenderingContext2D, ox: number, sw: number) {
-  ctx.save(); ctx.translate(ox, 8); const kx = Math.sin(sw * 0.5) * 7, ky = 8, fx = kx + Math.sin(sw) * 5;
-  ctx.strokeStyle = "#5b4bb0"; ctx.lineWidth = 4.5; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(kx, ky); ctx.lineTo(fx, ky + 9); ctx.stroke();
-  ctx.fillStyle = "#3a3070"; ctx.beginPath(); ctx.ellipse(fx, ky + 10, 4, 2.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(ox, 6); const kx = Math.sin(sw * 0.5) * 5, ky = 5, fx = kx + Math.sin(sw) * 4;
+  ctx.strokeStyle = "#5b4bb0"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(kx, ky); ctx.lineTo(fx, ky + 6); ctx.stroke();
+  ctx.fillStyle = "#2f2760"; ctx.beginPath(); ctx.ellipse(fx, ky + 7, 3.4, 2.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
 }
 function drawRobot(ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, run: number, s: S) {
-  const now = performance.now();
-  ctx.save(); ctx.translate(x, y); ctx.scale(1, dir);
-  if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 4, 0, 0, 30), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 30, 0, Math.PI * 2); ctx.fill(); }
+  const now = performance.now(), TAU = Math.PI * 2;
+  ctx.save(); ctx.translate(x, y); ctx.scale(1, dir); ctx.scale(0.82, 0.82);
+  if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 3, 0, 0, 26), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 26, 0, TAU); ctx.fill(); }
   const s1 = Math.sin(run), s2 = Math.sin(run + Math.PI);
-  drawLeg(ctx, -5, s1); drawLeg(ctx, 5, s2);
-  ctx.save(); ctx.translate(6, -6); ctx.rotate(-s1 * 0.5); ctx.fillStyle = "#6d5bd0"; rr(ctx, -3, 0, 6, 13, 3); ctx.restore();
-  const bg = ctx.createLinearGradient(-13, -16, 13, 10); bg.addColorStop(0, "#b9a7ff"); bg.addColorStop(0.5, "#8b6cf6"); bg.addColorStop(1, "#6b4fd0"); ctx.fillStyle = bg; rr(ctx, -13, -16, 26, 26, 8);
-  ctx.fillStyle = "rgba(255,255,255,0.28)"; rr(ctx, -10, -13, 8, 20, 4);
-  ctx.strokeStyle = "rgba(40,30,80,0.35)"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.moveTo(-13, -2); ctx.lineTo(13, -2); ctx.stroke();
-  const pulse = 0.6 + 0.4 * Math.sin(now / 200); ctx.fillStyle = `rgba(110,240,220,${pulse})`; ctx.beginPath(); ctx.arc(0, 3, 4.5, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#e6fffb"; ctx.beginPath(); ctx.arc(0, 3, 2, 0, Math.PI * 2); ctx.fill();
-  ctx.save(); ctx.translate(-6, -6); ctx.rotate(s1 * 0.6); ctx.fillStyle = "#9a86f0"; rr(ctx, -3, 0, 6, 13, 3); ctx.fillStyle = "#c9bdff"; ctx.beginPath(); ctx.arc(0, 13, 3, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-  const hg = ctx.createLinearGradient(0, -30, 0, -16); hg.addColorStop(0, "#d7ccff"); hg.addColorStop(1, "#9a86f0"); ctx.fillStyle = hg; rr(ctx, -10, -30, 20, 16, 7);
-  ctx.fillStyle = "#1c2140"; rr(ctx, -7, -27, 14, 9, 4);
-  ctx.fillStyle = "#5eead4"; ctx.beginPath(); ctx.ellipse(-1, -22.5, 3.6, 2.6, 0, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.beginPath(); ctx.arc(-2.5, -23.5, 1, 0, Math.PI * 2); ctx.fill();
-  ctx.strokeStyle = "#9a86f0"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(0, -30); ctx.lineTo(0, -37); ctx.stroke(); ctx.fillStyle = Math.sin(now / 150) > 0 ? "#ff5a7a" : "#7a2a3a"; ctx.beginPath(); ctx.arc(0, -38, 2.6, 0, Math.PI * 2); ctx.fill();
+  drawLeg(ctx, -4, s1); drawLeg(ctx, 4, s2);
+  ctx.save(); ctx.translate(7, -3); ctx.rotate(-s1 * 0.5); ctx.fillStyle = "#5b4bb0"; rr(ctx, -2.4, 0, 4.8, 10, 2.4); ctx.restore();
+  const body = ctx.createLinearGradient(-11, -10, 11, 9); body.addColorStop(0, "#cdbcff"); body.addColorStop(0.45, "#9a7cf8"); body.addColorStop(1, "#6f52d6"); ctx.fillStyle = body; rr(ctx, -11, -10, 22, 20, 7);
+  ctx.fillStyle = "#7c5cf6"; rr(ctx, -12.5, -9, 5, 8, 2.5); rr(ctx, 7.5, -9, 5, 8, 2.5);
+  ctx.fillStyle = "rgba(255,255,255,0.26)"; rr(ctx, -8, -7, 5, 14, 2.5);
+  ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(9, -6); ctx.lineTo(9, 5); ctx.stroke();
+  ctx.strokeStyle = "rgba(40,28,80,0.4)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(11, 0); ctx.stroke();
+  const pulse = 0.55 + 0.45 * Math.sin(now / 180);
+  const cg = ctx.createRadialGradient(0, 2, 0.5, 0, 2, 6); cg.addColorStop(0, `rgba(150,255,235,${pulse})`); cg.addColorStop(1, "rgba(90,220,200,0)"); ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 2, 6, 0, TAU); ctx.fill();
+  ctx.fillStyle = "#0f766e"; ctx.beginPath(); ctx.arc(0, 2, 3, 0, TAU); ctx.fill(); ctx.fillStyle = `rgba(205,255,248,${0.6 + 0.4 * pulse})`; ctx.beginPath(); ctx.arc(0, 2, 1.6, 0, TAU); ctx.fill();
+  ctx.save(); ctx.translate(-7, -3); ctx.rotate(s1 * 0.6); ctx.fillStyle = "#8567e6"; rr(ctx, -2.4, 0, 4.8, 10, 2.4); ctx.fillStyle = "#c9bdff"; ctx.beginPath(); ctx.arc(0, 10, 2.4, 0, TAU); ctx.fill(); ctx.restore();
+  const hg = ctx.createLinearGradient(0, -22, 0, -9); hg.addColorStop(0, "#e7e0ff"); hg.addColorStop(1, "#a58ff2"); ctx.fillStyle = hg; rr(ctx, -8, -22, 16, 13, 6);
+  ctx.fillStyle = "#6f52d6"; ctx.beginPath(); ctx.arc(-8, -15, 2.2, 0, TAU); ctx.arc(8, -15, 2.2, 0, TAU); ctx.fill();
+  ctx.fillStyle = "#171a33"; rr(ctx, -6, -20, 12, 7, 3.4);
+  const eg = ctx.createLinearGradient(-5, 0, 5, 0); eg.addColorStop(0, "#5eead4"); eg.addColorStop(0.5, "#b6fff2"); eg.addColorStop(1, "#5eead4"); ctx.fillStyle = eg; rr(ctx, -4.5, -18.4, 9, 3, 1.5);
+  ctx.strokeStyle = "#a58ff2"; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(0, -27); ctx.stroke();
+  const blink = Math.sin(now / 150) > 0; if (blink) { const bl = ctx.createRadialGradient(0, -28, 0, 0, -28, 4); bl.addColorStop(0, "rgba(255,120,150,0.9)"); bl.addColorStop(1, "rgba(255,120,150,0)"); ctx.fillStyle = bl; ctx.beginPath(); ctx.arc(0, -28, 4, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = blink ? "#ff5a7a" : "#7a2a3a"; ctx.beginPath(); ctx.arc(0, -28, 2, 0, TAU); ctx.fill();
   ctx.restore();
-  if (s.shield) { ctx.save(); ctx.strokeStyle = "rgba(56,189,248,0.9)"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(56,189,248,0.12)"; ctx.beginPath(); ctx.arc(x, y, PR + 9, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); ctx.restore(); }
+  if (s.shield) { ctx.save(); ctx.strokeStyle = "rgba(56,189,248,0.9)"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(56,189,248,0.12)"; ctx.beginPath(); ctx.arc(x, y, PR + 8, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
 }
 function drawHUD(ctx: CanvasRenderingContext2D, s: S) {
   const n = Math.max(3, s.lives);
