@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { ArrowLeft, FlaskConical } from "lucide-react";
 import { api } from "@/lib/client/fetcher";
 import { useChapters } from "@/components/chapter-select";
-import { UNCATEGORIZED, bucketOf } from "@/lib/chapters";
+import { UNCATEGORIZED, bucketOf, STANDARD_CHAPTERS } from "@/lib/chapters";
+import { ChapterMotif } from "@/components/demos/ChapterMotif";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -71,16 +72,22 @@ export default function QuestionsPage() {
             <Button onClick={() => setForm({ ...emptyForm })}>新建题目</Button>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {cards.map((c, i) => (
+            {cards.map((c, i) => {
+              const sIdx = (STANDARD_CHAPTERS as readonly string[]).indexOf(c.name);
+              return (
               <button key={c.name} onClick={() => { setSel(c.name); setFType(""); }}
-                className={`flex min-h-[104px] flex-col justify-between rounded-3xl p-5 text-left shadow-soft transition hover:opacity-95 ${TONES[i % TONES.length]}`}>
-                <div className="flex items-center justify-between">
+                className={`relative flex min-h-[104px] flex-col justify-between overflow-hidden rounded-3xl p-5 text-left shadow-soft transition hover:opacity-95 ${TONES[i % TONES.length]}`}>
+                {sIdx >= 0
+                  ? <ChapterMotif n={sIdx + 1} className="pointer-events-none absolute -bottom-4 -right-3 h-24 w-24 opacity-20" />
+                  : <FlaskConical className="pointer-events-none absolute -bottom-3 -right-3 h-20 w-20 opacity-15" />}
+                <div className="relative flex items-center justify-between">
                   <span className="text-sm font-semibold opacity-90">{c.name}</span>
-                  <FlaskConical className="h-5 w-5 opacity-80" />
+                  {sIdx >= 0 ? <ChapterMotif n={sIdx + 1} className="h-5 w-5 opacity-80" /> : <FlaskConical className="h-5 w-5 opacity-80" />}
                 </div>
-                <div className="num text-2xl font-extrabold tracking-tight">{c.count} <span className="text-sm font-medium opacity-80">题</span></div>
+                <div className="relative num text-2xl font-extrabold tracking-tight">{c.count} <span className="text-sm font-medium opacity-80">题</span></div>
               </button>
-            ))}
+              );
+            })}
           </div>
         </>
       ) : (

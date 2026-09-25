@@ -20,12 +20,13 @@ export default function ToolsIndex() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {TOOLS.map((t, i) => (
           <FadeIn key={t.href} delay={i * 0.05}>
-            <Link href={t.href} className={`flex min-h-[128px] flex-col justify-between rounded-3xl p-5 shadow-soft transition hover:opacity-95 ${t.tone}`}>
-              <div className="flex items-center justify-between">
+            <Link href={t.href} className={`relative flex min-h-[128px] flex-col justify-between overflow-hidden rounded-3xl p-5 shadow-soft transition hover:opacity-95 ${t.tone}`}>
+              <t.Icon className="pointer-events-none absolute -bottom-4 -right-3 h-24 w-24 opacity-15" />
+              <div className="relative flex items-center justify-between">
                 <span className="text-sm font-semibold opacity-90">工具</span>
                 <t.Icon className="h-6 w-6 opacity-80" />
               </div>
-              <div>
+              <div className="relative">
                 <div className="text-xl font-extrabold tracking-tight">{t.title}</div>
                 <div className="mt-1 text-xs opacity-90">{t.sub}</div>
               </div>

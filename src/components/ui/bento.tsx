@@ -18,13 +18,14 @@ export function SectionLabel({ children, className }: { children: React.ReactNod
 }
 
 /** 大号数字统计砖（柔和底色，随主题翻）*/
-export function StatTile({ value, label, tone = "violet", className }: {
-  value: React.ReactNode; label: React.ReactNode; tone?: Tone; className?: string;
+export function StatTile({ value, label, tone = "violet", icon: Icon, className }: {
+  value: React.ReactNode; label: React.ReactNode; tone?: Tone; icon?: React.ComponentType<{ className?: string }>; className?: string;
 }) {
   return (
-    <div className={cn("rounded-2xl p-4 shadow-soft", SOFT[tone], className)}>
-      <div className="num text-2xl font-extrabold tracking-tight sm:text-3xl">{value}</div>
-      <div className="mt-0.5 text-xs font-medium opacity-90">{label}</div>
+    <div className={cn("relative overflow-hidden rounded-2xl p-4 shadow-soft", SOFT[tone], className)}>
+      {Icon && <Icon className="pointer-events-none absolute -bottom-3 -right-2 h-20 w-20 opacity-15" />}
+      <div className="relative num text-2xl font-extrabold tracking-tight sm:text-3xl">{value}</div>
+      <div className="relative mt-0.5 text-xs font-medium opacity-90">{label}</div>
     </div>
   );
 }

@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Users, GraduationCap, ClipboardList, Library } from "lucide-react";
 import { api } from "@/lib/client/fetcher";
 import { FadeIn } from "@/components/motion/fade-in";
 import { SectionLabel } from "@/components/ui/bento";
@@ -22,10 +22,10 @@ export default function TeacherHome() {
   const totalStudents = classes.reduce((a, c) => a + Number(c.count ?? 0), 0);
 
   const tiles = [
-    { href: "/teacher/roster", cls: "soft-violet", k: "班级", v: classes.length, cap: "个教学班" },
-    { href: "/teacher/roster", cls: "soft-emerald", k: "学生", v: totalStudents, cap: "名在册" },
-    { href: "/teacher/assignments", cls: "soft-blue", k: "作业", v: assignments.length, cap: "份 · 点击查看" },
-    { href: "/teacher/questions", cls: "tile-dark", k: "题库", v: "→", cap: "创建与管理题目" },
+    { href: "/teacher/roster", cls: "soft-violet", k: "班级", v: classes.length, cap: "个教学班", Icon: Users },
+    { href: "/teacher/roster", cls: "soft-emerald", k: "学生", v: totalStudents, cap: "名在册", Icon: GraduationCap },
+    { href: "/teacher/assignments", cls: "soft-blue", k: "作业", v: assignments.length, cap: "份 · 点击查看", Icon: ClipboardList },
+    { href: "/teacher/questions", cls: "tile-dark", k: "题库", v: "→", cap: "创建与管理题目", Icon: Library },
   ];
 
   return (
@@ -47,9 +47,10 @@ export default function TeacherHome() {
         {tiles.map((t, i) => (
           <FadeIn key={t.k} delay={(i + 1) * 0.04}>
             <Link href={t.href}
-              className={`flex min-h-[132px] flex-col justify-between rounded-3xl p-5 shadow-soft transition hover:opacity-95 ${t.cls}`}>
-              <div className="text-sm font-semibold opacity-90">{t.k}</div>
-              <div>
+              className={`relative flex min-h-[132px] flex-col justify-between overflow-hidden rounded-3xl p-5 shadow-soft transition hover:opacity-95 ${t.cls}`}>
+              <t.Icon className="pointer-events-none absolute -bottom-4 -right-3 h-24 w-24 opacity-15" />
+              <div className="relative text-sm font-semibold opacity-90">{t.k}</div>
+              <div className="relative">
                 <div className="num text-4xl font-extrabold leading-none tracking-tight">{t.v}</div>
                 <div className="mt-1 text-sm opacity-90">{t.cap}</div>
               </div>

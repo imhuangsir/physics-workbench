@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { ClipboardCheck, ListChecks, Target } from "lucide-react";
 import { api } from "@/lib/client/fetcher";
 import { FadeIn } from "@/components/motion/fade-in";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,9 +38,9 @@ export default function ReportPage() {
 
       <FadeIn>
         <div className="grid grid-cols-3 gap-3">
-          <StatTile tone="blue" value={r.assignmentsDone} label="完成作业" />
-          <StatTile tone="violet" value={r.total} label="已答题（客观+已批）" />
-          <StatTile tone={rateTone(r.accuracy)} value={`${Math.round(r.accuracy * 100)}%`} label="总正确率" />
+          <StatTile tone="blue" icon={ClipboardCheck} value={r.assignmentsDone} label="完成作业" />
+          <StatTile tone="violet" icon={ListChecks} value={r.total} label="已答题（客观+已批）" />
+          <StatTile tone={rateTone(r.accuracy)} icon={Target} value={`${Math.round(r.accuracy * 100)}%`} label="总正确率" />
         </div>
       </FadeIn>
 

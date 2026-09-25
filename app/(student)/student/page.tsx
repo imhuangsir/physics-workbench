@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Megaphone, ArrowRight } from "lucide-react";
+import { Megaphone, ArrowRight, Clock, CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/client/fetcher";
 import { getSession } from "@/lib/client/auth";
 import { FadeIn } from "@/components/motion/fade-in";
@@ -75,8 +75,8 @@ export default function StudentHome() {
             </span>
           </div>
         </FadeIn>
-        <FadeIn delay={0.05}><StatTile tone="violet" value={pending} label="待完成" className="min-h-[132px] flex flex-col justify-center" /></FadeIn>
-        <FadeIn delay={0.1}><StatTile tone="emerald" value={done} label="已完成" className="min-h-[132px] flex flex-col justify-center" /></FadeIn>
+        <FadeIn delay={0.05}><StatTile tone="violet" icon={Clock} value={pending} label="待完成" className="min-h-[132px] flex flex-col justify-center" /></FadeIn>
+        <FadeIn delay={0.1}><StatTile tone="emerald" icon={CheckCircle2} value={done} label="已完成" className="min-h-[132px] flex flex-col justify-center" /></FadeIn>
       </div>
 
       {anns.length > 0 && (
