@@ -8,11 +8,12 @@ type Ob = { x: number; kind: OKind; surf: "floor" | "ceil"; w: number; h: number
 type IKind = "heart" | "shield" | "star" | "clock";
 type Item = { x: number; y: number; kind: IKind; ph: number; got: boolean };
 type Part = { x: number; y: number; vx: number; vy: number; life: number; col: string };
+type Plan = { kind: OKind; surf: "floor" | "ceil"; open: "floor" | "ceil"; w: number; h: number; safe: "floor" | "ceil" | null };
 type S = ReturnType<typeof fresh>;
-// 障碍按距离解锁(越靠后越晚登场 → 花样交替递增)
+// 障碍按距离解锁(越靠后越晚登场，节奏放缓)
 const UNLOCK: { k: OKind; at: number }[] = [
-  { k: "spike", at: 0 }, { k: "crate", at: 0 }, { k: "saw", at: 300 },
-  { k: "drone", at: 700 }, { k: "gate", at: 1150 }, { k: "laser", at: 1700 }, { k: "pad", at: 2300 },
+  { k: "spike", at: 0 }, { k: "crate", at: 0 }, { k: "saw", at: 500 },
+  { k: "drone", at: 1100 }, { k: "gate", at: 1900 }, { k: "laser", at: 2800 }, { k: "pad", at: 3800 },
 ];
 // 场景关键帧：草原 → 沙漠 → 黄昏 → 夜晚(随距离推进)
 const STAGES = [
@@ -21,7 +22,7 @@ const STAGES = [
   { sT: [118, 92, 166], sB: [244, 150, 122], g: [132, 98, 122], gD: [94, 70, 92], hl: [154, 112, 142], sun: [255, 182, 122] },
   { sT: [16, 20, 52], sB: [44, 40, 96], g: [40, 46, 72], gD: [24, 30, 52], hl: [56, 60, 100], sun: [214, 224, 255] },
 ];
-function fresh() { return { y: FLOOR - PR, vy: 0, dir: 1, obs: [] as Ob[], items: [] as Item[], parts: [] as Part[], dist: 0, next: 300, nextItem: 460, run: 0, spd: 230, lives: 3, inv: 0, shield: false, star: 0, slow: 0, boost: 0, gems: 0 }; }
+function fresh() { return { y: FLOOR - PR, vy: 0, dir: 1, obs: [] as Ob[], items: [] as Item[], parts: [] as Part[], dist: 0, next: 420, nextItem: 460, run: 0, spd: 165, lives: 3, inv: 0, shield: false, star: 0, slow: 0, boost: 0, gems: 0, pending: null as Plan | null, lastSafe: null as ("floor" | "ceil" | null) }; }
 // —— 玩家自有 AI 素材(切自3张图，透明底)；未加载时自动回退矢量，绝不因缺图崩溃 ——
 const SPR_NAMES = ["robot_run1", "robot_run2", "robot_run3", "robot_run4", "ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
 const SPR: Record<string, HTMLImageElement> = {};
@@ -30,6 +31,9 @@ function preloadSprites(onload: () => void) { if (typeof window === "undefined")
 function blit(ctx: CanvasRenderingContext2D, im: HTMLImageElement, x: number, y: number, w: number, h: number, flipV: boolean) { if (flipV) { ctx.save(); ctx.translate(0, y + h); ctx.scale(1, -1); ctx.drawImage(im, x, 0, w, h); ctx.restore(); } else ctx.drawImage(im, x, y, w, h); }
 function blitRot(ctx: CanvasRenderingContext2D, im: HTMLImageElement, cx: number, cy: number, w: number, h: number, ang: number) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); }
 function robotFrame(run: number) { const f = Math.floor(run * 1.1) % 4; return sprite("robot_run" + (f + 1)) || sprite("robot_run1"); }
+function opp(s: "floor" | "ceil"): "floor" | "ceil" { return s === "floor" ? "ceil" : "floor"; }
+// 强制换边所需的最小横向间距：按当前速度(含加速带增益余量)×翻转穿越+反应时间，保证一定翻得过去
+function flipGap(dist: number) { return (165 + dist * 0.022) * 1.35 * 0.85 + 40; }
 
 export function GravityRunGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -44,17 +48,22 @@ export function GravityRunGame() {
   useEffect(() => { preloadSprites(() => bumpLoad((x) => x + 1)); }, []);
 
   function reset() { st.current = fresh(); setScore(0); setGems(0); setOver(false); setErr(null); }
-  function spawnOb() {
-    const s = st.current;
-    const avail = UNLOCK.filter((u) => s.dist >= u.at);
+  function planOb(dist: number, prevSafe: "floor" | "ceil" | null): Plan {
+    const avail = UNLOCK.filter((u) => dist >= u.at);
     const k = avail[Math.floor(Math.random() * avail.length)].k;
-    const surf: "floor" | "ceil" = Math.random() < 0.5 ? "floor" : "ceil";
-    const open: "floor" | "ceil" = Math.random() < 0.5 ? "floor" : "ceil";
+    let surf: "floor" | "ceil" = Math.random() < 0.5 ? "floor" : "ceil";
+    let open: "floor" | "ceil" = Math.random() < 0.5 ? "floor" : "ceil";
+    let safe: "floor" | "ceil" | null = null;
+    const forcing = k === "spike" || k === "crate" || k === "saw" || k === "gate" || k === "laser";
+    if (forcing) {
+      safe = prevSafe ? (Math.random() < 0.32 ? opp(prevSafe) : prevSafe) : (Math.random() < 0.5 ? "floor" : "ceil");
+      if (k === "gate" || k === "laser") open = safe; else surf = opp(safe); // 危险物在"安全侧"的对面
+    }
     let w = 30, h = 44;
     if (k === "crate") { w = 34; h = 30 + (Math.random() < 0.4 ? 34 : 0); }
     else if (k === "spike") { w = 40 + Math.random() * 22; h = 24 + Math.random() * 10; }
     else if (k === "gate") w = 30; else if (k === "laser") w = 34; else if (k === "pad") w = 46;
-    s.obs.push({ x: W + 20, kind: k, surf, w, h, ph: Math.random() * 6, open, dead: false });
+    return { kind: k, surf, open, w, h, safe };
   }
   function spawnItem() {
     const s = st.current, r = Math.random();
@@ -82,8 +91,8 @@ export function GravityRunGame() {
     const s = st.current, f = Math.min(dt / 1000, 0.033);
     try {
     s.inv = Math.max(0, s.inv - f); s.star = Math.max(0, s.star - f); s.slow = Math.max(0, s.slow - f); s.boost = Math.max(0, s.boost - f);
-    const base = 230 + s.dist * 0.028;
-    s.spd = Math.min(540, base * (s.star > 0 ? 1.4 : 1) * (s.boost > 0 ? 1.45 : 1) * (s.slow > 0 ? 0.5 : 1));
+    const base = 165 + s.dist * 0.022, warm = Math.min(1, 0.75 + s.dist / 1200);
+    s.spd = Math.min(470, base * warm * (s.star > 0 ? 1.4 : 1) * (s.boost > 0 ? 1.3 : 1) * (s.slow > 0 ? 0.5 : 1));
     s.run += s.spd * f * 0.05; s.dist += s.spd * f; setScore(Math.floor(s.dist / 10));
     s.vy += G * s.dir * f; s.y += s.vy * f;
     if (s.y > FLOOR - PR) { s.y = FLOOR - PR; s.vy = 0; } if (s.y < CEIL + PR) { s.y = CEIL + PR; s.vy = 0; }
@@ -93,11 +102,20 @@ export function GravityRunGame() {
     s.items = s.items.filter((it) => it.x > -30 && !it.got);
     for (const p of s.parts) { p.x += p.vx * f; p.y += p.vy * f; p.vy += 400 * f; p.life -= f; }
     s.parts = s.parts.filter((p) => p.life > 0);
-    if (s.dist > s.next) { spawnOb(); s.next = s.dist + Math.max(150, 300 - s.dist / 40) + Math.random() * 150; }
+    if (s.dist > s.next) {
+      if (!s.pending) s.pending = planOb(s.dist, s.lastSafe);
+      const ob = s.pending;
+      s.obs.push({ x: W + 20, kind: ob.kind, surf: ob.surf, w: ob.w, h: ob.h, ph: Math.random() * 6, open: ob.open, dead: false });
+      s.lastSafe = ob.safe;
+      s.pending = planOb(s.dist, s.lastSafe);
+      let g = Math.max(200, 330 - s.dist / 70) + Math.random() * 130;
+      if (s.lastSafe && s.pending.safe && s.lastSafe !== s.pending.safe) g = Math.max(g, flipGap(s.dist) + ob.w);
+      s.next = s.dist + g;
+    }
     if (s.dist > s.nextItem) { spawnItem(); s.nextItem = s.dist + 650 + Math.random() * 650; }
     for (const it of s.items) if (!it.got && Math.hypot(PX - it.x, s.y - it.y) < PR + 16) { it.got = true; apply(it.kind); }
     for (const o of s.obs) {
-      if (o.kind === "pad") { if (hit(s.y, box(o)) && s.boost <= 0) s.boost = 1.5; continue; }
+      if (o.kind === "pad") { if (hit(s.y, box(o)) && s.boost <= 0) s.boost = 1.2; continue; }
       if (o.kind === "laser" && !laserOn(o)) continue;
       if (hit(s.y, box(o))) { if (s.star > 0) { o.dead = true; spark("#fbbf24"); } else takeHit(); }
     }
