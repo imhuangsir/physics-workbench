@@ -1,0 +1,10 @@
+Game art in this folder is from Kenney (https://kenney.nl) — "Robot Pack" and
+"Platformer Pack Remastered". Licensed CC0 1.0 (public domain): free for any use,
+commercial or not, attribution not required. Credit is voluntary and given here.
+
+Files:
+  robot_body / robot_drive1 / robot_drive2 / robot_hurt  — Robot Pack (Side view, blue)
+  ob_spike / ob_crate                                    — Platformer Pack Remastered (Tiles)
+  ob_saw / ob_fly                                        — Platformer Pack Remastered (Enemies)
+  item_heart                                             — Platformer Pack Remastered (HUD)
+  item_star                                              — Platformer Pack Remastered (Items)
