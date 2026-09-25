@@ -23,7 +23,7 @@ export function StackGame() {
     let raf = 0, mounted = true;
     import("matter-js").then((M) => {
       if (!mounted) return;
-      const engine = M.Engine.create(); engine.gravity.y = 1.2;
+      const engine = M.Engine.create(); engine.gravity.y = 1.0;
       const ground = M.Bodies.rectangle(W / 2, GROUND + 40, W * 3, 80, { isStatic: true });
       M.Composite.add(engine.world, ground);
       g.current = { M, engine, blocks: [], carrier: { x: W / 2, w: 84, dir: 1, y: GROUND - 40 }, phase: "aim", prevTop: GROUND, camY: 0, settle: 0, dropped: null, over: false };
@@ -34,12 +34,12 @@ export function StackGame() {
     return () => { mounted = false; cancelAnimationFrame(raf); const s = g.current; if (s) { s.M.Composite.clear(s.engine.world, false); s.M.Engine.clear(s.engine); } };
   }, []);
 
-  function addBase() { const s = g.current!; const w = 96, b = s.M.Bodies.rectangle(W / 2, GROUND - BH / 2, w, BH, { friction: 0.9, isStatic: false }); s.M.Composite.add(s.engine.world, b); s.blocks.push({ body: b, w, col: TONES[0] }); s.prevTop = GROUND - BH; }
+  function addBase() { const s = g.current!; const w = 96, b = s.M.Bodies.rectangle(W / 2, GROUND - BH / 2, w, BH, { friction: 1, frictionStatic: 2, frictionAir: 0.02 }); s.M.Composite.add(s.engine.world, b); s.blocks.push({ body: b, w, col: TONES[0] }); s.prevTop = GROUND - BH; }
   function newCarrier() { const s = g.current!; const w = 46 + Math.random() * 46; s.carrier = { x: W / 2, w, dir: Math.random() < 0.5 ? 1 : -1, y: s.prevTop - DROP_GAP }; s.phase = "aim"; }
   function drop() {
     const s = g.current; if (!s || s.over) return;
     if (s.phase !== "aim") return;
-    const b = s.M.Bodies.rectangle(s.carrier.x, s.carrier.y, s.carrier.w, BH, { friction: 0.9, restitution: 0 });
+    const b = s.M.Bodies.rectangle(s.carrier.x, s.carrier.y, s.carrier.w, BH, { friction: 1, frictionStatic: 2, frictionAir: 0.02, restitution: 0 });
     s.M.Composite.add(s.engine.world, b);
     const blk = { body: b, w: s.carrier.w, col: TONES[s.blocks.length % TONES.length] };
     s.blocks.push(blk); s.dropped = blk; s.phase = "fall"; s.settle = 0;
@@ -49,7 +49,7 @@ export function StackGame() {
     const s = g.current; if (!s) return;
     s.M.Engine.update(s.engine, 1000 / 60);
     if (!s.over) {
-      if (s.phase === "aim") { const c = s.carrier; c.x += c.dir * (2.2 + s.blocks.length * 0.15); if (c.x < c.w / 2) { c.x = c.w / 2; c.dir = 1; } if (c.x > W - c.w / 2) { c.x = W - c.w / 2; c.dir = -1; } }
+      if (s.phase === "aim") { const c = s.carrier; c.x += c.dir * (1.8 + s.blocks.length * 0.1); if (c.x < c.w / 2) { c.x = c.w / 2; c.dir = 1; } if (c.x > W - c.w / 2) { c.x = W - c.w / 2; c.dir = -1; } }
       else if (s.phase === "fall" && s.dropped) {
         const d = s.dropped.body, sp = Math.hypot(d.velocity.x, d.velocity.y);
         if (sp < 0.45 && Math.abs(d.angularVelocity) < 0.03) s.settle++; else s.settle = 0;
@@ -73,8 +73,17 @@ export function StackGame() {
     const ctx = fitCanvas(cv, W, H);
     const camTarget = Math.min(s.carrier.y, s.prevTop) - 70; s.camY += (camTarget - s.camY) * 0.1;
     const cam = Math.min(0, s.camY);
-    ctx.fillStyle = "#f2f6fc"; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#d7e0ee"; ctx.fillRect(0, GROUND - cam, W, H); // 地面
+    const alt = Math.max(0, -cam), u = Math.min(1, alt / 2200);
+    const L = (a: number, b: number) => Math.round(a + (b - a) * u);
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0, `rgb(${L(150, 16)},${L(200, 22)},${L(255, 54)})`); sky.addColorStop(1, `rgb(${L(224, 34)},${L(238, 44)},${L(255, 86)})`);
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, H);
+    for (let k = 0; k < 16; k++) {
+      const sy = (GROUND - 150 - k * 220) - cam; if (sy < -40 || sy > H + 40) continue; const wx = (k * 151) % W;
+      if (k < 6) { ctx.fillStyle = `rgba(255,255,255,${0.75 * (1 - u)})`; [[0, 0, 15], [14, 4, 12], [-13, 5, 11]].forEach(([dx, dy, r]) => { ctx.beginPath(); ctx.arc(wx + dx, sy + dy, r, 0, Math.PI * 2); ctx.fill(); }); }
+      else { ctx.fillStyle = `rgba(255,255,255,${0.15 + 0.55 * u})`; ctx.beginPath(); ctx.arc(wx, sy, 1.6, 0, Math.PI * 2); ctx.fill(); }
+    }
+    ctx.fillStyle = "#cdb28a"; ctx.fillRect(0, GROUND - cam, W, H); ctx.fillStyle = "#b3966a"; ctx.fillRect(0, GROUND - cam, W, 5);
     for (const b of s.blocks) drawBlk(ctx, b, cam);
     if (s.phase === "aim" && !s.over) { // 待落方块在顶部
       const c = s.carrier, y = c.y - cam;
