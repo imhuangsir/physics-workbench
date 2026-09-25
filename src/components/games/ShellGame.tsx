@@ -53,13 +53,15 @@ export function ShellGame() {
   function render() {
     const cv = canvasRef.current; if (!cv) return;
     const ctx = fitCanvas(cv, W, H); const s = st.current;
-    // 背景墙 + 桌面 + 木纹 + 聚光
-    const wall = ctx.createLinearGradient(0, 0, 0, H); wall.addColorStop(0, "#f6eede"); wall.addColorStop(1, "#e6d8bd");
-    ctx.fillStyle = wall; ctx.fillRect(0, 0, W, H);
-    ctx.fillStyle = "#c9a97a"; ctx.beginPath(); ctx.moveTo(64, 96); ctx.lineTo(W - 64, 96); ctx.lineTo(W - 14, H - 14); ctx.lineTo(14, H - 14); ctx.closePath(); ctx.fill();
-    ctx.strokeStyle = "rgba(110,72,36,0.16)"; ctx.lineWidth = 1.5; for (let i = 1; i < 6; i++) { const t = i / 6; ctx.beginPath(); ctx.moveTo(64 + (14 - 64) * t, 96 + (H - 14 - 96) * t); ctx.lineTo(W - 64 + (W - 14 - (W - 64)) * t, 96 + (H - 14 - 96) * t); ctx.stroke(); }
-    ctx.fillStyle = "#bd9b68"; ctx.beginPath(); ctx.ellipse(W / 2, 96, (W - 128) / 2, 11, 0, 0, Math.PI * 2); ctx.fill();
-    const spot = ctx.createRadialGradient(W / 2, GY - 10, 20, W / 2, GY - 10, 230); spot.addColorStop(0, "rgba(255,250,235,0.45)"); spot.addColorStop(1, "rgba(255,250,235,0)"); ctx.fillStyle = spot; ctx.fillRect(0, 60, W, H - 60);
+    const t = performance.now() / 1000;
+    // 暖色舞台背景 + 挂布 + 顶部聚光锥 + 圆木桌 + 暗角 + 尘埃
+    const bg = ctx.createLinearGradient(0, 0, 0, H); bg.addColorStop(0, "#4a3626"); bg.addColorStop(0.55, "#5b3f28"); bg.addColorStop(1, "#2e2016"); ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 0.05; ctx.fillStyle = "#000"; for (let x = 0; x < W; x += 16) ctx.fillRect(x, 0, 8, 116); ctx.globalAlpha = 1;
+    const cone = ctx.createLinearGradient(W / 2, -20, W / 2, H); cone.addColorStop(0, "rgba(255,238,196,0.30)"); cone.addColorStop(0.55, "rgba(255,232,180,0.08)"); cone.addColorStop(1, "rgba(255,232,180,0)"); ctx.fillStyle = cone; ctx.beginPath(); ctx.moveTo(W / 2 - 34, -10); ctx.lineTo(W / 2 + 34, -10); ctx.lineTo(W - 24, H); ctx.lineTo(24, H); ctx.closePath(); ctx.fill();
+    drawTable(ctx);
+    const spot = ctx.createRadialGradient(W / 2, GY - 6, 14, W / 2, GY + 6, 210); spot.addColorStop(0, "rgba(255,247,225,0.42)"); spot.addColorStop(1, "rgba(255,247,225,0)"); ctx.fillStyle = spot; ctx.fillRect(0, 80, W, H - 80);
+    const vg = ctx.createRadialGradient(W / 2, GY, 70, W / 2, GY, 330); vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,0.5)"); ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+    for (let i = 0; i < 16; i++) { const dx = (i * 97 + t * (8 + (i % 4) * 5)) % W; const dy = 40 + ((i * 53 + Math.sin(t * 0.5 + i) * 12) % (H - 60)); ctx.fillStyle = `rgba(255,240,210,${0.05 + 0.07 * (0.5 + 0.5 * Math.sin(t * 1.3 + i))})`; ctx.beginPath(); ctx.arc(dx, dy, 1.3, 0, Math.PI * 2); ctx.fill(); }
 
     const shown = s.phase === "reveal" || s.phase === "result";
     const ballShell = s.shells[s.ballId];
@@ -111,4 +113,18 @@ export function ShellGame() {
       <p className="text-xs text-muted-foreground">盯紧小球所在的椰子壳，洗牌结束后点它。<b>从简单开始</b>——交换次数和速度会一轮轮慢慢增加。猜对进下一轮，猜错结束，看你能连对几轮！</p>
     </div>
   );
+}
+
+// 圆木桌(3/4 俯视椭圆：厚度 + 年轮 + 径向木纹 + 高光 + 描边)
+function drawTable(ctx: CanvasRenderingContext2D) {
+  const cx = W / 2, cy = GY + 22, rx = 190, ry = 62;
+  ctx.fillStyle = "#3f2814"; ctx.beginPath(); ctx.ellipse(cx, cy + 16, rx, ry, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.save(); ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.clip();
+  const wg = ctx.createRadialGradient(cx - 44, cy - 18, 14, cx, cy, rx); wg.addColorStop(0, "#cfa976"); wg.addColorStop(0.55, "#ac7d43"); wg.addColorStop(1, "#7f5528"); ctx.fillStyle = wg; ctx.fillRect(cx - rx, cy - ry, rx * 2, ry * 2);
+  ctx.strokeStyle = "rgba(88,54,22,0.30)"; ctx.lineWidth = 1.5; for (let i = 1; i <= 10; i++) { const f = i / 10; ctx.beginPath(); ctx.ellipse(cx - 22, cy - 6, rx * f * 0.92, ry * f * 0.92, 0.12, 0, Math.PI * 2); ctx.stroke(); }
+  ctx.strokeStyle = "rgba(70,42,16,0.14)"; ctx.lineWidth = 1; for (let a = 0; a < 14; a++) { const ang = a / 14 * Math.PI * 2; ctx.beginPath(); ctx.moveTo(cx - 22, cy - 6); ctx.lineTo(cx - 22 + Math.cos(ang) * rx, cy - 6 + Math.sin(ang) * ry); ctx.stroke(); }
+  const hl = ctx.createLinearGradient(cx, cy - ry, cx, cy + 6); hl.addColorStop(0, "rgba(255,242,214,0.32)"); hl.addColorStop(1, "rgba(255,242,214,0)"); ctx.fillStyle = hl; ctx.fillRect(cx - rx, cy - ry, rx * 2, ry);
+  ctx.restore();
+  ctx.strokeStyle = "rgba(56,34,12,0.7)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = "rgba(255,228,184,0.3)"; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.ellipse(cx, cy - 1, rx - 2, ry - 2, 0, Math.PI * 1.08, Math.PI * 1.92); ctx.stroke();
 }
