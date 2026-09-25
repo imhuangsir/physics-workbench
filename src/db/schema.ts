@@ -33,6 +33,7 @@ export const questions = sqliteTable("questions", {
   answerJson: text("answer_json"),
   analysis: text("analysis"),
   knowledgeTagsJson: text("knowledge_tags_json").notNull().default("[]"),
+  imagesJson: text("images_json"),
   chapter: text("chapter"),
   difficulty: integer("difficulty").notNull().default(1),
   createdAt: integer("created_at").notNull().$defaultFn(nowSec),

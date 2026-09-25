@@ -9,9 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { QuestionImages, parseImages } from "@/components/question-images";
 
 type Option = { key: string; text: string };
-type Q = { questionId: number; type: "single" | "multi" | "fill" | "short"; stem: string; optionsJson: string | null; orderNo: number; score: number };
+type Q = { questionId: number; type: "single" | "multi" | "fill" | "short"; stem: string; optionsJson: string | null; imagesJson: string | null; orderNo: number; score: number };
 type Detail = { id: number; title: string; dueAt: number | null; questions: Q[] };
 type AnswerMap = Record<number, string | string[]>;
 
@@ -94,6 +95,7 @@ export default function AnswerPage({ params }: { params: Promise<{ id: string }>
               <Badge variant="neutral">{q.score} 分</Badge>
             </CardHeader>
             <CardContent className="space-y-2">
+              <QuestionImages images={parseImages(q.imagesJson)} className="mb-1" />
               {q.type === "single" && opts.map((o) => (
                 <label key={o.key} className="flex cursor-pointer items-center gap-3 rounded-lg border p-3 hover:bg-accent">
                   <input type="radio" name={`q${q.questionId}`} checked={cur === o.key} onChange={() => setSingle(q.questionId, o.key)} />

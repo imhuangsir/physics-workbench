@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { toast } from "sonner";
-import { api } from "@/lib/client/fetcher";
+import { api, compressToDataURL } from "@/lib/client/fetcher";
 import { getSession } from "@/lib/client/auth";
 import { splitQuestions, type DraftType } from "@/lib/ocr/split";
 import { QuestionForm, buildPayload, emptyForm, LETTERS, type FormState, type QType } from "@/components/question-form";
@@ -52,6 +52,38 @@ async function wordToText(file: File): Promise<string> {
   const mammoth = (await import("mammoth/mammoth.browser.js")).default;
   return String((await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() }))?.value ?? "");
 }
+/** Word → 文字(保留"图N"题注) + 图片(按"图N"或顺序编号，data URL，已压缩)。公式：能转成文字的保留，图片形式的按图导入。 */
+async function wordToRich(file: File): Promise<{ text: string; figs: Record<number, string> }> {
+  const mammoth = (await import("mammoth/mammoth.browser.js")).default;
+  const imgs: string[] = [];
+  const options = {
+    convertImage: mammoth.images.imgElement(async (image: { read: (enc: string) => Promise<string>; contentType: string }) => {
+      const b64 = await image.read("base64"); const src = `data:${image.contentType};base64,${b64}`;
+      const k = imgs.length; imgs.push(src); return { src, "data-idx": String(k) };
+    }),
+  };
+  const html = String((await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() }, options))?.value ?? "");
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  let text = "";
+  const walk = (node: Node) => {
+    node.childNodes.forEach((c) => {
+      if (c.nodeType === Node.TEXT_NODE) text += c.textContent ?? "";
+      else if (c.nodeType === Node.ELEMENT_NODE) {
+        const el = c as HTMLElement;
+        if (el.tagName === "IMG") text += `\u0001${el.getAttribute("data-idx")}\u0001`;
+        else { walk(el); if (/^(P|DIV|LI|BR|TR|H[1-6])$/.test(el.tagName)) text += "\n"; }
+      }
+    });
+  };
+  walk(doc.body);
+  const capOf = imgs.map((_, k) => { const pos = text.indexOf(`\u0001${k}\u0001`); if (pos < 0) return 0; const m = text.slice(Math.max(0, pos - 8), pos + 40).match(/图\s*(\d+)/); return m ? Number(m[1]) : 0; });
+  const used = new Set<number>(capOf.filter(Boolean)); let seq = 0;
+  const nextFree = () => { do { seq++; } while (used.has(seq)); used.add(seq); return seq; };
+  const figs: Record<number, string> = {};
+  for (let k = 0; k < imgs.length; k++) { const n = capOf[k] || nextFree(); figs[n] = await compressToDataURL(imgs[k]); }
+  const clean = text.replace(/\u0001\d+\u0001/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  return { text: clean, figs };
+}
 async function pdfToText(file: File): Promise<string> {
   const pdfjs = await import("pdfjs-dist");
   pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).href;
@@ -75,15 +107,28 @@ export default function ImportPage() {
   const [forms, setForms] = useState<FormState[]>([]);
   const [chapter, setChapter] = useState("");
   const [ansFile, setAnsFile] = useState<File | null>(null);
+  const [figs, setFigs] = useState<Record<number, string>>({});
+
+  function attachFigs(fs: FormState[]): FormState[] {
+    if (!Object.keys(figs).length) return fs;
+    return fs.map((f) => {
+      const ns = [...new Set(Array.from(f.stem.matchAll(/图\s*(\d+)/g)).map((m) => Number(m[1])))];
+      const imgs = ns.map((n) => figs[n]).filter(Boolean) as string[];
+      return imgs.length ? { ...f, images: imgs } : f;
+    });
+  }
 
   async function extract() {
     if (!file) return toast.error("请先选择文件");
     setBusy(true); setForms([]);
     try {
-      const t = source === "image" ? await ocrToText(file) : source === "word" ? await wordToText(file) : await pdfToText(file);
+      let t = "", figCount = 0;
+      if (source === "image") { t = await ocrToText(file); setFigs({}); }
+      else if (source === "word") { const r = await wordToRich(file); t = r.text; setFigs(r.figs); figCount = Object.keys(r.figs).length; }
+      else { t = await pdfToText(file); setFigs({}); }
       setText(t);
       if (!t.trim()) toast.error("没有提取到文字，换一种方式或检查文件");
-      else toast.success("提取完成，点“AI 智能切题”");
+      else toast.success(`提取完成${figCount ? `（含 ${figCount} 张配图，切题后按“图N”自动配到题上）` : ""}，点“AI 智能切题”`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "提取失败"); }
     finally { setBusy(false); }
   }
@@ -92,12 +137,12 @@ export default function ImportPage() {
     setBusy(true);
     try {
       const r = await api<{ questions: Draft[]; by: string }>("/api/teacher/split", { method: "POST", body: JSON.stringify({ text }) });
-      setForms(r.questions.map(formFromDraft));
+      setForms(attachFigs(r.questions.map(formFromDraft)));
       toast.success(`${r.by === "ai" ? "AI" : "规则"}切分出 ${r.questions.length} 道草稿题`);
     } catch (e) { toast.error(e instanceof Error ? e.message : "切题失败"); }
     finally { setBusy(false); }
   }
-  function ruleSplitNow() { setForms(splitQuestions(text).map((q) => formFromDraft({ ...q, answer: null }))); }
+  function ruleSplitNow() { setForms(attachFigs(splitQuestions(text).map((q) => formFromDraft({ ...q, answer: null })))); }
   function setFormAt(i: number, f: FormState) { setForms((a) => a.map((x, j) => (j === i ? f : x))); }
 
   async function fillAnswers() {

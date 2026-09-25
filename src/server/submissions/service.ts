@@ -80,6 +80,7 @@ export async function getResult(db: DB, assignmentId: number, studentId: number)
       const isShort = q.type === "short";
       return {
         questionId: r.questionId, type: q.type, stem: q.stem,
+        imagesJson: q.imagesJson,
         content: JSON.parse(r.contentJson), isCorrect: r.isCorrect, score: r.score,
         answer: q.answerJson ? JSON.parse(q.answerJson) : null, // 结果页可看标准答案
         analysis: q.analysis,

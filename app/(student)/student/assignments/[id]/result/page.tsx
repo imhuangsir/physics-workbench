@@ -6,10 +6,11 @@ import { formatDuration } from "@/components/timer";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { StatTile } from "@/components/ui/bento";
+import { QuestionImages, parseImages } from "@/components/question-images";
 import { cn } from "@/lib/utils";
 
 type Ans = {
-  questionId: number; type: string; stem: string;
+  questionId: number; type: string; stem: string; imagesJson?: string | null;
   content: string | string[] | null; isCorrect: number | null; score: number | null;
   answer: string | string[] | null; analysis: string | null; aiFeedback: string | null; pending: boolean;
 };
@@ -85,6 +86,7 @@ export default function ResultPage({ params }: { params: Promise<{ id: string }>
             )}
           </CardHeader>
           <CardContent className="space-y-1.5 text-sm">
+            <QuestionImages images={parseImages(a.imagesJson)} className="mb-1" />
             <p><span className="text-muted-foreground">你的作答：</span>{toText(a.content)}</p>
             {!a.pending && a.answer != null && (
               <p><span className="text-muted-foreground">标准答案：</span>{toText(a.answer)}</p>

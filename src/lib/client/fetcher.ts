@@ -59,7 +59,20 @@ export async function compressImage(file: File, maxDim = 1280, quality = 0.8): P
   }
 }
 
-/** 带鉴权拉取图片并生成 object URL（用后请 revoke）。 */
+/** 压缩为 JPEG data URL（等比缩放，透明底填白，适合题目配图/公式图存入 D1）。入参可为 File/Blob 或 data URL 字符串。 */
+export async function compressToDataURL(src: Blob | string, maxDim = 1000, quality = 0.82): Promise<string> {
+  try {
+    const dataUrl = typeof src === "string" ? src : await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(src); });
+    const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
+    let width = img.naturalWidth, height = img.naturalHeight;
+    if (!width || !height) return typeof src === "string" ? src : "";
+    if (Math.max(width, height) > maxDim) { const s = maxDim / Math.max(width, height); width = Math.round(width * s); height = Math.round(height * s); }
+    const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
+    const ctx = canvas.getContext("2d"); if (!ctx) return dataUrl;
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, width, height); ctx.drawImage(img, 0, 0, width, height);
+    return canvas.toDataURL("image/jpeg", quality);
+  } catch { return typeof src === "string" ? src : ""; }
+}
 export async function fetchImageUrl(key: string): Promise<string> {
   const s = getSession();
   const res = await fetch(`/api/uploads/${key}`, { headers: s?.token ? { Authorization: `Bearer ${s.token}` } : {} });

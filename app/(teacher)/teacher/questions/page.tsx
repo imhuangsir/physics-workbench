@@ -6,6 +6,7 @@ import { api } from "@/lib/client/fetcher";
 import { useChapters } from "@/components/chapter-select";
 import { UNCATEGORIZED, bucketOf, STANDARD_CHAPTERS } from "@/lib/chapters";
 import { ChapterMotif } from "@/components/demos/ChapterMotif";
+import { parseImages } from "@/components/question-images";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +15,7 @@ import { QuestionForm, buildPayload, emptyForm, formFromQuestion, TYPE_LABEL, ty
 
 type Question = {
   id: number; type: QType; stem: string; optionsJson: string | null; answerJson: string | null;
-  analysis: string | null; knowledgeTagsJson: string; chapter: string | null; difficulty: number;
+  analysis: string | null; knowledgeTagsJson: string; chapter: string | null; difficulty: number; imagesJson: string | null;
 };
 const TONES = ["soft-violet", "soft-blue", "soft-emerald", "soft-amber", "soft-rose"];
 
@@ -113,6 +114,7 @@ export default function QuestionsPage() {
                     <div className="mb-1 flex items-center gap-2">
                       <Badge variant="neutral">{TYPE_LABEL[q.type]}</Badge>
                       <span className="text-xs text-muted-foreground">难度 {q.difficulty}</span>
+                      {parseImages(q.imagesJson).length > 0 && <span className="text-xs text-muted-foreground">· 🖼 {parseImages(q.imagesJson).length} 图</span>}
                     </div>
                     <p className="truncate">{q.stem}</p>
                   </div>

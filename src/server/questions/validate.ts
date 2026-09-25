@@ -6,6 +6,7 @@ export interface QuestionInput {
   type: QuestionType; stem: string;
   options?: Option[]; answer?: string | string[] | null;
   analysis?: string; knowledgeTags?: string[]; chapter?: string; difficulty?: number;
+  images?: string[];
 }
 
 /** 校验并归一化为可入库的 JSON 字段；非法则抛 validation_error */
@@ -38,6 +39,7 @@ export function normalizeQuestion(input: QuestionInput) {
     type: input.type, stem, optionsJson, answerJson,
     analysis: input.analysis?.trim() || null,
     knowledgeTagsJson: JSON.stringify(input.knowledgeTags ?? []),
+    imagesJson: Array.isArray(input.images) && input.images.length ? JSON.stringify(input.images.filter((s) => typeof s === "string" && s)) : null,
     chapter: input.chapter?.trim() || null,
     difficulty: input.difficulty ?? 1,
   };

@@ -50,6 +50,7 @@ export async function getStudentAssignmentDetail(db: DB, assignmentId: number, s
     return {
       questionId: q.id, type: q.type, stem: q.stem,
       optionsJson: q.optionsJson, // 选项要发；答案/解析不发
+      imagesJson: q.imagesJson,
       orderNo: aq.orderNo, score: aq.score,
     };
   });

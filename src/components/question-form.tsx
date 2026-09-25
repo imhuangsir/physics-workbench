@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { ChapterSelect } from "@/components/chapter-select";
+import { compressToDataURL } from "@/lib/client/fetcher";
 import type { QuestionInput } from "@/server/questions/validate";
 
 export const LETTERS = "ABCDEFGH".split("");
@@ -14,18 +15,18 @@ export const TYPE_LABEL: Record<QType, string> = { single: "单选", multi: "多
 export type FormState = {
   id: number | null; type: QType; stem: string;
   optionTexts: string[]; correctSingle: number; correctMulti: number[];
-  fillAnswers: string[]; chapter: string; tags: string; difficulty: number; analysis: string;
+  fillAnswers: string[]; chapter: string; tags: string; difficulty: number; analysis: string; images: string[];
 };
 
 export const emptyForm: FormState = {
   id: null, type: "single", stem: "", optionTexts: ["", ""], correctSingle: 0, correctMulti: [],
-  fillAnswers: [""], chapter: "", tags: "", difficulty: 1, analysis: "",
+  fillAnswers: [""], chapter: "", tags: "", difficulty: 1, analysis: "", images: [],
 };
 
 /** 从题库题目回填表单（编辑用）。 */
 export function formFromQuestion(q: {
   id: number; type: QType; stem: string; optionsJson: string | null; answerJson: string | null;
-  analysis: string | null; knowledgeTagsJson: string; chapter: string | null; difficulty: number;
+  analysis: string | null; knowledgeTagsJson: string; chapter: string | null; difficulty: number; imagesJson?: string | null;
 }): FormState {
   const options: { key: string; text: string }[] = q.optionsJson ? JSON.parse(q.optionsJson) : [];
   const ans = q.answerJson ? JSON.parse(q.answerJson) : null;
@@ -37,14 +38,14 @@ export function formFromQuestion(q: {
     correctMulti: q.type === "multi" && Array.isArray(ans) ? ans.map((k: string) => keys.indexOf(k)).filter((i) => i >= 0) : [],
     fillAnswers: q.type === "fill" && Array.isArray(ans) ? ans : [""],
     chapter: q.chapter ?? "", tags: (JSON.parse(q.knowledgeTagsJson || "[]") as string[]).join("，"),
-    difficulty: q.difficulty, analysis: q.analysis ?? "",
+    difficulty: q.difficulty, analysis: q.analysis ?? "", images: q.imagesJson ? JSON.parse(q.imagesJson) as string[] : [],
   };
 }
 
 /** 表单 → 创建/更新题目的请求体。 */
 export function buildPayload(f: FormState): QuestionInput {
   const tags = f.tags.split(/[，,]/).map((t) => t.trim()).filter(Boolean);
-  const base = { type: f.type, stem: f.stem, analysis: f.analysis, knowledgeTags: tags, chapter: f.chapter, difficulty: f.difficulty };
+  const base = { type: f.type, stem: f.stem, analysis: f.analysis, knowledgeTags: tags, chapter: f.chapter, difficulty: f.difficulty, images: f.images };
   if (f.type === "single") {
     const options = f.optionTexts.map((text, i) => ({ key: LETTERS[i], text }));
     return { ...base, options, answer: LETTERS[f.correctSingle] };
@@ -75,6 +76,12 @@ export function QuestionForm({ form, setForm, onSave, onCancel, saveLabel = "保
     setForm({ ...form, correctMulti: form.correctMulti.includes(i) ? form.correctMulti.filter((k) => k !== i) : [...form.correctMulti, i] });
   }
   function setFill(i: number, v: string) { const a = [...form.fillAnswers]; a[i] = v; setForm({ ...form, fillAnswers: a }); }
+  async function addImages(files: FileList | null) {
+    if (!files || !files.length) return;
+    const added: string[] = [];
+    for (const f of Array.from(files)) { const d = await compressToDataURL(f); if (d) added.push(d); }
+    if (added.length) setForm({ ...form, images: [...form.images, ...added] });
+  }
 
   return (
     <div className="max-h-[70vh] space-y-3 overflow-y-auto pr-1">
@@ -87,6 +94,22 @@ export function QuestionForm({ form, setForm, onSave, onCancel, saveLabel = "保
       <div className="space-y-1.5">
         <Label>题干</Label>
         <Textarea value={form.stem} onChange={(e) => setForm({ ...form, stem: e.target.value })} />
+      </div>
+      <div className="space-y-1.5">
+        <Label>配图（图1 / 图2… · 可选，可多张）</Label>
+        {form.images.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {form.images.map((src, i) => (
+              <div key={i} className="relative">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={src} alt={`配图 ${i + 1}`} className="h-24 w-auto rounded-lg border border-border bg-white object-contain" />
+                <button type="button" aria-label="删除配图" onClick={() => setForm({ ...form, images: form.images.filter((_, j) => j !== i) })}
+                  className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-xs font-bold text-background">×</button>
+              </div>
+            ))}
+          </div>
+        )}
+        <input type="file" accept="image/*" multiple onChange={(e) => { void addImages(e.target.files); e.target.value = ""; }} className="text-sm" />
       </div>
       {isChoice && (
         <div className="space-y-1.5">
