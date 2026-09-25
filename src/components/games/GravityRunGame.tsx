@@ -15,7 +15,7 @@ const UNLOCK: { k: OKind; at: number }[] = [
   { k: "drone", at: 700 }, { k: "gate", at: 1150 }, { k: "laser", at: 1700 }, { k: "pad", at: 2300 },
 ];
 // 场景关键帧：草原 → 沙漠 → 黄昏 → 夜晚(随距离推进)
-const ST = [
+const STAGES = [
   { sT: [150, 205, 255], sB: [224, 244, 255], g: [126, 188, 92], gD: [88, 148, 64], hl: [150, 200, 122], sun: [255, 238, 152] },
   { sT: [255, 214, 150], sB: [255, 242, 216], g: [216, 184, 120], gD: [184, 150, 92], hl: [222, 192, 142], sun: [255, 224, 140] },
   { sT: [118, 92, 166], sB: [244, 150, 122], g: [132, 98, 122], gD: [94, 70, 92], hl: [154, 112, 142], sun: [255, 182, 122] },
@@ -147,7 +147,11 @@ function lerp3(a: number[], b: number[], t: number) { return [Math.round(a[0] + 
 function rgb(a: number[]) { return `rgb(${a[0]},${a[1]},${a[2]})`; }
 function shadeArr(a: number[], f: number) { return [Math.min(255, Math.round(a[0] * f)), Math.min(255, Math.round(a[1] * f)), Math.min(255, Math.round(a[2] * f))]; }
 function pal(dist: number) {
-  const f = Math.min(ST.length - 1, dist / 1400), i = Math.floor(f), t = f - i, a = ST[i], b = ST[Math.min(ST.length - 1, i + 1)];
+  const n = STAGES.length;
+  const raw = dist / 1400;
+  const f = Number.isFinite(raw) ? Math.max(0, Math.min(n - 1, raw)) : 0;
+  const i = Math.max(0, Math.min(n - 1, Math.floor(f))), j = Math.min(n - 1, i + 1), t = f - i;
+  const a = STAGES[i] || STAGES[0], b = STAGES[j] || STAGES[0];
   return { sT: lerp3(a.sT, b.sT, t), sB: lerp3(a.sB, b.sB, t), g: lerp3(a.g, b.g, t), gD: lerp3(a.gD, b.gD, t), hl: lerp3(a.hl, b.hl, t), sun: lerp3(a.sun, b.sun, t), night: f > 2.4 };
 }
 type Pal = ReturnType<typeof pal>;
