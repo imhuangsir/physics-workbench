@@ -22,14 +22,14 @@ const STAGES = [
   { sT: [16, 20, 52], sB: [44, 40, 96], g: [40, 46, 72], gD: [24, 30, 52], hl: [56, 60, 100], sun: [214, 224, 255] },
 ];
 function fresh() { return { y: FLOOR - PR, vy: 0, dir: 1, obs: [] as Ob[], items: [] as Item[], parts: [] as Part[], dist: 0, next: 300, nextItem: 460, run: 0, spd: 230, lives: 3, inv: 0, shield: false, star: 0, slow: 0, boost: 0, gems: 0 }; }
-// —— Kenney CC0 精灵；未加载(或加载失败)时自动回退到矢量绘制，绝不因缺图崩溃 ——
-const SPR_NAMES = ["robot_body", "robot_drive1", "robot_drive2", "robot_hurt", "ob_spike", "ob_crate", "ob_saw", "ob_fly", "item_heart", "item_star"];
+// —— 玩家自有 AI 素材(切自3张图，透明底)；未加载时自动回退矢量，绝不因缺图崩溃 ——
+const SPR_NAMES = ["robot_run1", "robot_run2", "robot_run3", "robot_run4", "ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
 const SPR: Record<string, HTMLImageElement> = {};
 function sprite(name: string): HTMLImageElement | null { const im = SPR[name]; return im && im.complete && im.naturalWidth > 0 ? im : null; }
 function preloadSprites(onload: () => void) { if (typeof window === "undefined") return; for (const nm of SPR_NAMES) { if (SPR[nm]) continue; const im = new Image(); im.onload = onload; im.onerror = () => {}; im.src = `/games/gravity-run/${nm}.png`; SPR[nm] = im; } }
 function blit(ctx: CanvasRenderingContext2D, im: HTMLImageElement, x: number, y: number, w: number, h: number, flipV: boolean) { if (flipV) { ctx.save(); ctx.translate(0, y + h); ctx.scale(1, -1); ctx.drawImage(im, x, 0, w, h); ctx.restore(); } else ctx.drawImage(im, x, y, w, h); }
 function blitRot(ctx: CanvasRenderingContext2D, im: HTMLImageElement, cx: number, cy: number, w: number, h: number, ang: number) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); }
-function robotFrame(run: number, inv: number) { if (inv > 0 && Math.floor(inv * 10) % 2 === 0) { const h = sprite("robot_hurt"); if (h) return h; } const f = Math.floor(run * 1.4) % 2; return sprite(f ? "robot_drive2" : "robot_drive1") || sprite("robot_body"); }
+function robotFrame(run: number) { const f = Math.floor(run * 1.1) % 4; return sprite("robot_run" + (f + 1)) || sprite("robot_run1"); }
 
 export function GravityRunGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -52,7 +52,7 @@ export function GravityRunGame() {
     const open: "floor" | "ceil" = Math.random() < 0.5 ? "floor" : "ceil";
     let w = 30, h = 44;
     if (k === "crate") { w = 34; h = 30 + (Math.random() < 0.4 ? 34 : 0); }
-    else if (k === "spike") { w = 26 + Math.random() * 18; h = 34 + Math.random() * 16; }
+    else if (k === "spike") { w = 40 + Math.random() * 22; h = 24 + Math.random() * 10; }
     else if (k === "gate") w = 30; else if (k === "laser") w = 34; else if (k === "pad") w = 46;
     s.obs.push({ x: W + 20, kind: k, surf, w, h, ph: Math.random() * 6, open, dead: false });
   }
@@ -208,7 +208,7 @@ function drawOb(ctx: CanvasRenderingContext2D, o: Ob) {
     for (let i = 0; i < n; i++) { const bx = r.x + i * seg; ctx.beginPath(); if (floorS) { ctx.moveTo(bx, FLOOR); ctx.lineTo(bx + seg / 2, FLOOR - r.h); ctx.lineTo(bx + seg, FLOOR); } else { ctx.moveTo(bx, CEIL); ctx.lineTo(bx + seg / 2, CEIL + r.h); ctx.lineTo(bx + seg, CEIL); } ctx.closePath(); ctx.fill(); }
     ctx.fillStyle = "rgba(255,255,255,0.6)"; for (let i = 0; i < n; i++) ctx.fillRect(r.x + i * seg + seg / 2 - 0.7, floorS ? FLOOR - r.h + 3 : CEIL + 2, 1.4, 5);
   } else if (o.kind === "crate") {
-    const im = sprite("ob_crate"); if (im) { blit(ctx, im, r.x, r.y, r.w, r.h, false); return; }
+    const im = sprite(o.h > 40 ? "ob_crate2" : "ob_crate"); if (im) { blit(ctx, im, r.x, r.y, r.w, r.h, false); return; }
     const gg = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h); gg.addColorStop(0, "#dc9b58"); gg.addColorStop(1, "#a9702f"); ctx.fillStyle = gg; rr(ctx, r.x, r.y, r.w, r.h, 3);
     ctx.strokeStyle = "#7c5222"; ctx.lineWidth = 2.5; ctx.strokeRect(r.x + 1, r.y + 1, r.w - 2, r.h - 2);
     ctx.beginPath(); ctx.moveTo(r.x + 2, r.y + 2); ctx.lineTo(r.x + r.w - 2, r.y + r.h - 2); ctx.moveTo(r.x + r.w - 2, r.y + 2); ctx.lineTo(r.x + 2, r.y + r.h - 2); ctx.stroke();
@@ -221,7 +221,7 @@ function drawOb(ctx: CanvasRenderingContext2D, o: Ob) {
     const bg = ctx.createRadialGradient(-4, -4, 3, 0, 0, 17); bg.addColorStop(0, "#eef1f6"); bg.addColorStop(1, "#8b95a8"); ctx.fillStyle = bg; ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = "#5b6480"; ctx.beginPath(); ctx.arc(0, 0, 4, 0, Math.PI * 2); ctx.fill(); ctx.restore();
   } else if (o.kind === "drone") {
     const y = MID + Math.sin(o.ph) * ((FLOOR - CEIL) * 0.32);
-    const dim = sprite("ob_fly"); if (dim) { blit(ctx, dim, cx - 20, y - 17, 40, 34, false); return; }
+    const dim = sprite("ob_drone"); if (dim) { blit(ctx, dim, cx - 20, y - 17, 40, 34, false); return; }
     const spin = Math.sin(o.ph * 20) * 10;
     ctx.strokeStyle = "rgba(120,130,150,0.7)"; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx - 18 - spin, y - 14); ctx.lineTo(cx - 18 + spin, y - 14); ctx.moveTo(cx + 18 - spin, y - 14); ctx.lineTo(cx + 18 + spin, y - 14); ctx.stroke();
     ctx.strokeStyle = "#5b6480"; ctx.beginPath(); ctx.moveTo(cx - 12, y - 8); ctx.lineTo(cx - 18, y - 14); ctx.moveTo(cx + 12, y - 8); ctx.lineTo(cx + 18, y - 14); ctx.stroke();
@@ -229,16 +229,20 @@ function drawOb(ctx: CanvasRenderingContext2D, o: Ob) {
     ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(cx - 6, y, 3.4, 0, Math.PI * 2); ctx.arc(cx + 6, y, 3.4, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = "#1f2740"; ctx.beginPath(); ctx.arc(cx - 6, y, 1.6, 0, Math.PI * 2); ctx.arc(cx + 6, y, 1.6, 0, Math.PI * 2); ctx.fill();
   } else if (o.kind === "gate") {
+    const gim = sprite("ob_gate"); if (gim) { blit(ctx, gim, r.x, r.y, r.w, r.h, false); const gy = o.open === "floor" ? FLOOR - LANE / 2 : CEIL + LANE / 2; ctx.fillStyle = "rgba(72,220,140,0.28)"; ctx.fillRect(r.x, gy - LANE / 2, r.w, LANE); return; }
     ctx.fillStyle = "#3a4252"; rr(ctx, r.x, r.y, r.w, r.h, 3); ctx.save(); ctx.beginPath(); ctx.rect(r.x, r.y, r.w, r.h); ctx.clip(); ctx.strokeStyle = "#f5c542"; ctx.lineWidth = 6; for (let d = -r.h; d < r.w + r.h; d += 16) { ctx.beginPath(); ctx.moveTo(r.x + d, r.y); ctx.lineTo(r.x + d - r.h, r.y + r.h); ctx.stroke(); } ctx.restore();
     const oy = o.open === "floor" ? FLOOR - LANE / 2 : CEIL + LANE / 2; ctx.fillStyle = "rgba(72,220,140,0.35)"; ctx.fillRect(r.x, oy - LANE / 2, r.w, LANE);
   } else if (o.kind === "laser") {
-    const on = laserOn(o), c = o.ph % 2.4, charging = c > 1.1 && c <= 1.5, top = o.open === "floor", ex = cx, ey = top ? CEIL : FLOOR;
-    ctx.fillStyle = "#3a4658"; ctx.fillRect(ex - 8, top ? CEIL - 2 : FLOOR - 6, 16, 8);
-    ctx.fillStyle = on ? "#ff5a5a" : charging ? "#ffcf5a" : "#6b7488"; ctx.beginPath(); ctx.arc(ex, top ? CEIL + 4 : FLOOR - 4, 4, 0, Math.PI * 2); ctx.fill();
+    const on = laserOn(o), c = o.ph % 2.4, charging = c > 1.1 && c <= 1.5, top = o.open === "floor", ex = cx;
+    const lim = sprite("ob_laser");
+    if (lim) { const es = 22; blit(ctx, lim, ex - es / 2, top ? CEIL - 2 : FLOOR - 2 - es, es, es, top); }
+    else { ctx.fillStyle = "#3a4658"; ctx.fillRect(ex - 8, top ? CEIL - 2 : FLOOR - 6, 16, 8); ctx.fillStyle = on ? "#ff5a5a" : charging ? "#ffcf5a" : "#6b7488"; ctx.beginPath(); ctx.arc(ex, top ? CEIL + 4 : FLOOR - 4, 4, 0, Math.PI * 2); ctx.fill(); }
     if (on) { const bg = ctx.createLinearGradient(ex - 5, 0, ex + 5, 0); bg.addColorStop(0, "rgba(255,80,80,0)"); bg.addColorStop(0.5, "rgba(255,90,90,0.9)"); bg.addColorStop(1, "rgba(255,80,80,0)"); ctx.fillStyle = bg; ctx.fillRect(r.x - 3, r.y, r.w + 6, r.h); ctx.fillStyle = "rgba(255,255,255,0.85)"; ctx.fillRect(cx - 1.5, r.y, 3, r.h); }
     else if (charging) { ctx.strokeStyle = "rgba(255,200,90,0.55)"; ctx.setLineDash([3, 5]); ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(cx, r.y); ctx.lineTo(cx, r.y + r.h); ctx.stroke(); ctx.setLineDash([]); }
   } else {
-    const y = floorS ? FLOOR - 12 : CEIL; ctx.fillStyle = "#0ea5e9"; rr(ctx, r.x, y, r.w, 12, 3);
+    const y = floorS ? FLOOR - 12 : CEIL;
+    const pim = sprite("ob_pad"); if (pim) { blit(ctx, pim, r.x, y - 2, r.w, 16, false); return; }
+    ctx.fillStyle = "#0ea5e9"; rr(ctx, r.x, y, r.w, 12, 3);
     ctx.fillStyle = "rgba(255,255,255,0.9)"; for (let i = 0; i < 3; i++) { const ax = r.x + 9 + i * 12; ctx.beginPath(); ctx.moveTo(ax, y + 3); ctx.lineTo(ax + 6, y + 6); ctx.lineTo(ax, y + 9); ctx.closePath(); ctx.fill(); }
   }
 }
@@ -251,9 +255,9 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item) {
   const gl = ctx.createRadialGradient(it.x, y, 2, it.x, y, 18); gl.addColorStop(0, `rgba(${gc},0.55)`); gl.addColorStop(1, `rgba(${gc},0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(it.x, y, 18, 0, Math.PI * 2); ctx.fill();
   ctx.save(); ctx.translate(it.x, y);
   if (it.kind === "heart") { const im = sprite("item_heart"); if (im) ctx.drawImage(im, -13, -13, 26, 26); else { ctx.fillStyle = "#f43f5e"; heart(ctx, 0, 0, 9); } }
-  else if (it.kind === "shield") { ctx.fillStyle = "#38bdf8"; shieldIcon(ctx, 0, 0, 10); ctx.fillStyle = "rgba(255,255,255,0.6)"; shieldIcon(ctx, 0, -1, 5); }
+  else if (it.kind === "shield") { const im = sprite("item_shield"); if (im) ctx.drawImage(im, -13, -13, 26, 26); else { ctx.fillStyle = "#38bdf8"; shieldIcon(ctx, 0, 0, 10); ctx.fillStyle = "rgba(255,255,255,0.6)"; shieldIcon(ctx, 0, -1, 5); } }
   else if (it.kind === "star") { const im = sprite("item_star"); if (im) ctx.drawImage(im, -13, -13, 26, 26); else { ctx.fillStyle = "#fbbf24"; starIcon(ctx, 0, 0, 10); } }
-  else { ctx.fillStyle = "#ede9fe"; ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#7c3aed"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -5); ctx.moveTo(0, 0); ctx.lineTo(4, 2); ctx.stroke(); }
+  else { const im = sprite("item_clock"); if (im) ctx.drawImage(im, -13, -13, 26, 26); else { ctx.fillStyle = "#ede9fe"; ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = "#7c3aed"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(0, 0, 9, 0, Math.PI * 2); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0, -5); ctx.moveTo(0, 0); ctx.lineTo(4, 2); ctx.stroke(); } }
   ctx.restore();
 }
 /*__G__*/
@@ -264,7 +268,7 @@ function drawLeg(ctx: CanvasRenderingContext2D, ox: number, sw: number) {
 }
 function drawRobot(ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, run: number, s: S) {
   const now = performance.now(), TAU = Math.PI * 2;
-  const rim = robotFrame(run, s.inv);
+  const rim = robotFrame(run);
   if (rim) {
     ctx.save(); ctx.translate(x, y); ctx.scale(1, dir);
     if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 3, 0, 0, 30), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill(); }
