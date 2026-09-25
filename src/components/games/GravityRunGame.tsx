@@ -8,6 +8,7 @@ type Ob = { x: number; kind: OKind; surf: "floor" | "ceil"; w: number; h: number
 type IKind = "heart" | "shield" | "star" | "clock";
 type Item = { x: number; y: number; kind: IKind; ph: number; got: boolean };
 type Part = { x: number; y: number; vx: number; vy: number; life: number; col: string };
+type Fire = { x: number; y: number; vy: number; ph: number };
 type Plan = { kind: OKind; surf: "floor" | "ceil"; open: "floor" | "ceil"; w: number; h: number; safe: "floor" | "ceil" | null };
 type S = ReturnType<typeof fresh>;
 // 障碍按距离解锁(越靠后越晚登场，节奏放缓)
@@ -15,25 +16,27 @@ const UNLOCK: { k: OKind; at: number }[] = [
   { k: "spike", at: 0 }, { k: "crate", at: 0 }, { k: "saw", at: 500 },
   { k: "drone", at: 1100 }, { k: "gate", at: 1900 }, { k: "laser", at: 2800 }, { k: "pad", at: 3800 },
 ];
-// 场景关键帧：草原 → 沙漠 → 黄昏 → 夜晚(随距离推进)
-const STAGES = [
+// 场景关键帧：前 1 万米由浅到深(晴日→黄昏→星夜)，1 万米后进入炼狱(红)
+const PRE = [
   { sT: [150, 205, 255], sB: [224, 244, 255], g: [126, 188, 92], gD: [88, 148, 64], hl: [150, 200, 122], sun: [255, 238, 152] },
-  { sT: [255, 214, 150], sB: [255, 242, 216], g: [216, 184, 120], gD: [184, 150, 92], hl: [222, 192, 142], sun: [255, 224, 140] },
-  { sT: [118, 92, 166], sB: [244, 150, 122], g: [132, 98, 122], gD: [94, 70, 92], hl: [154, 112, 142], sun: [255, 182, 122] },
-  { sT: [16, 20, 52], sB: [44, 40, 96], g: [40, 46, 72], gD: [24, 30, 52], hl: [56, 60, 100], sun: [214, 224, 255] },
+  { sT: [255, 190, 138], sB: [255, 226, 198], g: [212, 172, 116], gD: [170, 134, 88], hl: [224, 184, 142], sun: [255, 208, 124] },
+  { sT: [20, 24, 58], sB: [46, 42, 92], g: [40, 46, 72], gD: [24, 30, 52], hl: [54, 58, 98], sun: [214, 224, 255] },
 ];
-function fresh() { return { y: FLOOR - PR, vy: 0, dir: 1, obs: [] as Ob[], items: [] as Item[], parts: [] as Part[], dist: 0, next: 420, nextItem: 460, run: 0, spd: 165, lives: 3, inv: 0, shield: false, star: 0, slow: 0, boost: 0, gems: 0, pending: null as Plan | null, lastSafe: null as ("floor" | "ceil" | null) }; }
+const HELL = { sT: [34, 6, 10], sB: [120, 22, 14], g: [72, 20, 16], gD: [40, 10, 10], hl: [120, 34, 22], sun: [255, 110, 40] };
+function fresh() { return { y: FLOOR - PR, vy: 0, dir: 1, obs: [] as Ob[], items: [] as Item[], parts: [] as Part[], fires: [] as Fire[], dist: 0, next: 420, nextItem: 460, nextFire: 0, run: 0, spd: 165, lives: 3, inv: 0, shield: false, star: 0, slow: 0, boost: 0, gems: 0, pending: null as Plan | null, lastSafe: null as ("floor" | "ceil" | null), msFlag: 0, banner: null as (null | { text: string; t: number }) }; }
 // —— 玩家自有 AI 素材(切自3张图，透明底)；未加载时自动回退矢量，绝不因缺图崩溃 ——
-const SPR_NAMES = ["robot_run1", "robot_run2", "robot_run3", "robot_run4", "ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
+const SPR_NAMES = ["robot_run1", "robot_run2", "robot_run3", "robot_run4", "robot_run5", "robot_run6", "robot_run7", "robot_run8", "robot_run9", "robot_run10", "ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
 const SPR: Record<string, HTMLImageElement> = {};
 function sprite(name: string): HTMLImageElement | null { const im = SPR[name]; return im && im.complete && im.naturalWidth > 0 ? im : null; }
 function preloadSprites(onload: () => void) { if (typeof window === "undefined") return; for (const nm of SPR_NAMES) { if (SPR[nm]) continue; const im = new Image(); im.onload = onload; im.onerror = () => {}; im.src = `/games/gravity-run/${nm}.png`; SPR[nm] = im; } }
 function blit(ctx: CanvasRenderingContext2D, im: HTMLImageElement, x: number, y: number, w: number, h: number, flipV: boolean) { if (flipV) { ctx.save(); ctx.translate(0, y + h); ctx.scale(1, -1); ctx.drawImage(im, x, 0, w, h); ctx.restore(); } else ctx.drawImage(im, x, y, w, h); }
 function blitRot(ctx: CanvasRenderingContext2D, im: HTMLImageElement, cx: number, cy: number, w: number, h: number, ang: number) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); }
-function robotFrame(run: number) { const f = Math.floor(run * 1.1) % 4; return sprite("robot_run" + (f + 1)) || sprite("robot_run1"); }
+function robotFrame(run: number) { const f = Math.floor(run * 2.6) % 10; return sprite("robot_run" + (f + 1)) || sprite("robot_run1"); }
 function opp(s: "floor" | "ceil"): "floor" | "ceil" { return s === "floor" ? "ceil" : "floor"; }
-// 强制换边所需的最小横向间距：按当前速度(含加速带增益余量)×翻转穿越+反应时间，保证一定翻得过去
-function flipGap(dist: number) { return (165 + dist * 0.022) * 1.35 * 0.85 + 40; }
+// 速度上限随里程递增：0–5km 470；5–10km 升到 570；10km 后炼狱最高 720
+function capAt(m: number) { return m < 5000 ? 470 : m < 10000 ? 470 + (m - 5000) / 5000 * 100 : Math.min(720, 570 + (m - 10000) / 5000 * 150); }
+// 强制换边所需最小横向间距：按当前里程的速度上限×翻转穿越+反应，保证一定翻得过去
+function flipGap(dist: number) { return capAt(dist / 10) * 0.95 + 40; }
 
 export function GravityRunGame() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -63,6 +66,8 @@ export function GravityRunGame() {
     if (k === "crate") { w = 34; h = 30 + (Math.random() < 0.4 ? 34 : 0); }
     else if (k === "spike") { w = 40 + Math.random() * 22; h = 24 + Math.random() * 10; }
     else if (k === "gate") w = 30; else if (k === "laser") w = 34; else if (k === "pad") w = 46;
+    const mm = dist / 10; // 5km 起障碍逐步加高
+    if (mm > 5000 && (k === "spike" || k === "crate")) h = Math.min((FLOOR - CEIL) * 0.72, h * (1 + Math.min(0.9, (mm - 5000) / 6000)));
     return { kind: k, surf, open, w, h, safe };
   }
   function spawnItem() {
@@ -92,7 +97,7 @@ export function GravityRunGame() {
     try {
     s.inv = Math.max(0, s.inv - f); s.star = Math.max(0, s.star - f); s.slow = Math.max(0, s.slow - f); s.boost = Math.max(0, s.boost - f);
     const base = 165 + s.dist * 0.022, warm = Math.min(1, 0.75 + s.dist / 1200);
-    s.spd = Math.min(470, base * warm * (s.star > 0 ? 1.4 : 1) * (s.boost > 0 ? 1.3 : 1) * (s.slow > 0 ? 0.5 : 1));
+    s.spd = Math.min(capAt(s.dist / 10), base * warm * (s.star > 0 ? 1.4 : 1) * (s.boost > 0 ? 1.3 : 1) * (s.slow > 0 ? 0.5 : 1));
     s.run += s.spd * f * 0.05; s.dist += s.spd * f; setScore(Math.floor(s.dist / 10));
     s.vy += G * s.dir * f; s.y += s.vy * f;
     if (s.y > FLOOR - PR) { s.y = FLOOR - PR; s.vy = 0; } if (s.y < CEIL + PR) { s.y = CEIL + PR; s.vy = 0; }
@@ -119,6 +124,16 @@ export function GravityRunGame() {
       if (o.kind === "laser" && !laserOn(o)) continue;
       if (hit(s.y, box(o))) { if (s.star > 0) { o.dead = true; spark("#fbbf24"); } else takeHit(); }
     }
+    const m = s.dist / 10;
+    if (s.banner) { s.banner.t -= f; if (s.banner.t <= 0) s.banner = null; }
+    if (m >= 10000 && s.msFlag < 2) { s.msFlag = 2; s.banner = { text: "炼狱阶段 · 全力冲刺", t: 2.4 }; }
+    else if (m >= 5000 && s.msFlag < 1) { s.msFlag = 1; s.banner = { text: "难度提升", t: 1.8 }; }
+    if (m >= 10000) { // 炼狱火球(新机制)：从右侧高速袭来，需翻转躲避
+      for (const fr of s.fires) { fr.x -= (s.spd + 180) * f; fr.y += fr.vy * f; fr.ph += 12 * f; if (fr.y < CEIL + 12) { fr.y = CEIL + 12; fr.vy = Math.abs(fr.vy); } if (fr.y > FLOOR - 12) { fr.y = FLOOR - 12; fr.vy = -Math.abs(fr.vy); } }
+      s.fires = s.fires.filter((fr) => fr.x > -30);
+      if (s.dist > s.nextFire) { s.fires.push({ x: W + 24, y: CEIL + 16 + Math.random() * (FLOOR - CEIL - 32), vy: (Math.random() * 2 - 1) * 60, ph: 0 }); s.nextFire = s.dist + 240 + Math.random() * 340; }
+      if (s.inv <= 0 && s.star <= 0) { for (const fr of s.fires) if (Math.hypot(PX - fr.x, s.y - fr.y) < PR + 11) { takeHit(); break; } }
+    } else if (s.fires.length) s.fires = [];
     render();
     } catch (e) { console.error("[GravityRun] frame error:", e); setPlaying(false); setErr(String((e as Error)?.message || e)); }
   }, playing, canvasRef);
@@ -130,12 +145,14 @@ export function GravityRunGame() {
     drawBg(ctx, s, P); drawGroundCeil(ctx, s, P);
     for (const o of s.obs) drawOb(ctx, o);
     for (const it of s.items) drawItem(ctx, it);
+    for (const fr of s.fires) drawFire(ctx, fr);
     for (const p of s.parts) { ctx.globalAlpha = Math.max(0, p.life * 2); ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2); ctx.fill(); }
     ctx.globalAlpha = 1;
     if (!(s.inv > 0 && Math.floor(s.inv * 12) % 2 === 0)) drawRobot(ctx, PX, s.y, s.dir, s.run, s);
     drawHUD(ctx, s);
     ctx.fillStyle = P.night ? "rgba(20,26,50,0.65)" : "rgba(255,255,255,0.7)"; ctx.fillRect(W - 96, 8, 84, 22);
     ctx.fillStyle = P.night ? "#fff" : "#1f2740"; ctx.font = "700 15px system-ui"; ctx.fillText(`${Math.floor(s.dist / 10)} m`, W - 88, 24);
+    if (s.banner && s.banner.t > 0) { ctx.save(); ctx.globalAlpha = Math.min(1, s.banner.t); ctx.textAlign = "center"; ctx.font = "800 30px system-ui"; ctx.lineWidth = 4; ctx.strokeStyle = "rgba(0,0,0,0.55)"; ctx.fillStyle = P.hell ? "#ffd0c0" : "#fff"; ctx.strokeText(s.banner.text, W / 2, MID - 18); ctx.fillText(s.banner.text, W / 2, MID - 18); ctx.textAlign = "left"; ctx.restore(); }
     if (!playing && !over) { ctx.fillStyle = "#1f2740"; ctx.font = "14px system-ui"; ctx.textAlign = "center"; ctx.fillText("点击开始 · 再点翻转重力，躲障碍 + 捡道具", W / 2, MID); ctx.textAlign = "left"; }
   }
 
@@ -154,7 +171,7 @@ export function GravityRunGame() {
         <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">最远 <b className="num">{best}</b> m</div>
         <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">道具 <b className="num">{gems}</b></div>
       </div>
-      <p className="text-xs text-muted-foreground">点击（或空格）<b>翻转重力</b>，小机器人在地面/天花板间奔跑。<b>3 条命</b>（左上爱心），撞到会掉血并短暂无敌闪烁。障碍各有机制：尖锐<b>地刺</b>、<b>木箱</b>、旋转<b>锯片</b>、乱窜<b>无人机</b>、只能走一侧的<b>护栏门</b>、定时<b>激光</b>、还有会<b>强行加速</b>让你更难躲的加速带。沿途捡道具：<b>❤补血</b>、<b>护盾</b>（挡一次）、<b>⭐无敌冲刺</b>、<b>时缓</b>。越跑越快、花样越多，背景也从草原一路变到星夜！</p>
+      <p className="text-xs text-muted-foreground">点击（或空格）<b>翻转重力</b>，小机器人在地面/天花板间奔跑。<b>3 条命</b>（左上爱心），撞到会掉血并短暂无敌闪烁。障碍各有机制：尖锐<b>地刺</b>、<b>木箱</b>、旋转<b>锯片</b>、乱窜<b>无人机</b>、只能走一侧的<b>护栏门</b>、定时<b>激光</b>、还有会<b>强行加速</b>让你更难躲的加速带。沿途捡道具：<b>❤补血</b>、<b>护盾</b>（挡一次）、<b>⭐无敌冲刺</b>、<b>时缓</b>。背景由浅到深随里程推进；<b>5km 起障碍变高变快</b>，<b>1 万米进入炼狱阶段</b>（红色天地 + 高速<b>火球</b>来袭），比谁跑得远！</p>
     </div>
   );
 }
@@ -175,12 +192,13 @@ function lerp3(a: number[], b: number[], t: number) { return [Math.round(a[0] + 
 function rgb(a: number[]) { return `rgb(${a[0]},${a[1]},${a[2]})`; }
 function shadeArr(a: number[], f: number) { return [Math.min(255, Math.round(a[0] * f)), Math.min(255, Math.round(a[1] * f)), Math.min(255, Math.round(a[2] * f))]; }
 function pal(dist: number) {
-  const n = STAGES.length;
-  const raw = dist / 1400;
-  const f = Number.isFinite(raw) ? Math.max(0, Math.min(n - 1, raw)) : 0;
-  const i = Math.max(0, Math.min(n - 1, Math.floor(f))), j = Math.min(n - 1, i + 1), t = f - i;
-  const a = STAGES[i] || STAGES[0], b = STAGES[j] || STAGES[0];
-  return { sT: lerp3(a.sT, b.sT, t), sB: lerp3(a.sB, b.sB, t), g: lerp3(a.g, b.g, t), gD: lerp3(a.gD, b.gD, t), hl: lerp3(a.hl, b.hl, t), sun: lerp3(a.sun, b.sun, t), night: f > 2.4 };
+  const m = Number.isFinite(dist) ? dist / 10 : 0;
+  if (m >= 10000) { // 炼狱：星夜 → 红，1200m 内过渡完成
+    const t = Math.min(1, (m - 10000) / 1200), a = PRE[2], b = HELL;
+    return { sT: lerp3(a.sT, b.sT, t), sB: lerp3(a.sB, b.sB, t), g: lerp3(a.g, b.g, t), gD: lerp3(a.gD, b.gD, t), hl: lerp3(a.hl, b.hl, t), sun: lerp3(a.sun, b.sun, t), night: true, hell: true };
+  }
+  const f = Math.max(0, Math.min(2, m / 5000)), i = Math.min(1, Math.floor(f)), t = f - i, a = PRE[i], b = PRE[i + 1];
+  return { sT: lerp3(a.sT, b.sT, t), sB: lerp3(a.sB, b.sB, t), g: lerp3(a.g, b.g, t), gD: lerp3(a.gD, b.gD, t), hl: lerp3(a.hl, b.hl, t), sun: lerp3(a.sun, b.sun, t), night: f > 1.4, hell: false };
 }
 type Pal = ReturnType<typeof pal>;
 function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) { ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); ctx.fill(); }
@@ -202,7 +220,8 @@ function drawBg(ctx: CanvasRenderingContext2D, s: S, P: Pal) {
   const sunX = (((W * 0.7 - s.dist * 0.02) % (W + 160)) + W + 160) % (W + 160) - 80, sunY = 78;
   const gl = ctx.createRadialGradient(sunX, sunY, 6, sunX, sunY, 70); gl.addColorStop(0, `rgba(${P.sun[0]},${P.sun[1]},${P.sun[2]},0.6)`); gl.addColorStop(1, `rgba(${P.sun[0]},${P.sun[1]},${P.sun[2]},0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(sunX, sunY, 70, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = rgb(P.sun); ctx.beginPath(); ctx.arc(sunX, sunY, 24, 0, Math.PI * 2); ctx.fill();
-  if (P.night) for (let k = 0; k < 50; k++) { const x = (k * 83 + 20) % W, y = (k * 47) % MID, tw = 0.4 + 0.6 * Math.abs(Math.sin(k + s.dist * 0.004)); ctx.fillStyle = `rgba(255,255,255,${tw * 0.8})`; ctx.beginPath(); ctx.arc(x, y, k % 5 === 0 ? 1.6 : 1, 0, Math.PI * 2); ctx.fill(); }
+  if (P.night && !P.hell) for (let k = 0; k < 50; k++) { const x = (k * 83 + 20) % W, y = (k * 47) % MID, tw = 0.4 + 0.6 * Math.abs(Math.sin(k + s.dist * 0.004)); ctx.fillStyle = `rgba(255,255,255,${tw * 0.8})`; ctx.beginPath(); ctx.arc(x, y, k % 5 === 0 ? 1.6 : 1, 0, Math.PI * 2); ctx.fill(); }
+  if (P.hell) for (let k = 0; k < 46; k++) { const ex = ((k * 97) - s.dist * 0.4) % W; const x = ex < 0 ? ex + W : ex; const y = FLOOR - ((k * 53 + s.dist * 0.7) % (FLOOR - CEIL)); const a = 0.25 + 0.5 * Math.abs(Math.sin(k + s.dist * 0.01)); ctx.fillStyle = `rgba(255,${110 + (k * 7) % 90},40,${a})`; ctx.beginPath(); ctx.arc(x, y, k % 4 === 0 ? 2 : 1.2, 0, Math.PI * 2); ctx.fill(); }
   ridgeH(ctx, FLOOR, 92, 150, s.dist * 0.05, rgb(shadeArr(P.hl, 0.92)), 0.55);
   ridgeH(ctx, FLOOR, 62, 96, s.dist * 0.11, rgb(shadeArr(P.hl, 0.78)), 0.85);
   if (!P.night) { const span = W + 160; for (let k = 0; k < 4; k++) { let cx = ((k * 168 + 60) - s.dist * 0.12) % span; if (cx < 0) cx += span; cx -= 80; puff(ctx, cx, 58 + (k % 2) * 34, 0.8 + (k % 2) * 0.2, 0.85); } }
@@ -279,6 +298,13 @@ function drawItem(ctx: CanvasRenderingContext2D, it: Item) {
   ctx.restore();
 }
 /*__G__*/
+function drawFire(ctx: CanvasRenderingContext2D, fr: Fire) {
+  const r = 11, fl = 1 + 0.15 * Math.sin(fr.ph);
+  const gl = ctx.createRadialGradient(fr.x, fr.y, 2, fr.x, fr.y, (r + 9) * fl); gl.addColorStop(0, "rgba(255,224,130,0.95)"); gl.addColorStop(0.5, "rgba(255,120,30,0.7)"); gl.addColorStop(1, "rgba(255,60,20,0)"); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(fr.x, fr.y, (r + 9) * fl, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,140,44,0.35)"; ctx.beginPath(); ctx.ellipse(fr.x + 17, fr.y, 17, 5, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#ff6a2a"; ctx.beginPath(); ctx.arc(fr.x, fr.y, r * 0.62, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "#ffd680"; ctx.beginPath(); ctx.arc(fr.x - 1, fr.y - 1, r * 0.34, 0, Math.PI * 2); ctx.fill();
+}
 function drawLeg(ctx: CanvasRenderingContext2D, ox: number, sw: number) {
   ctx.save(); ctx.translate(ox, 6); const kx = Math.sin(sw * 0.5) * 5, ky = 5, fx = kx + Math.sin(sw) * 4;
   ctx.strokeStyle = "#5b4bb0"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(kx, ky); ctx.lineTo(fx, ky + 6); ctx.stroke();
