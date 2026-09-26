@@ -25,13 +25,13 @@ const PRE = [
 const HELL = { sT: [34, 6, 10], sB: [120, 22, 14], g: [72, 20, 16], gD: [40, 10, 10], hl: [120, 34, 22], sun: [255, 110, 40] };
 function fresh() { return { y: FLOOR - PR, vy: 0, dir: 1, obs: [] as Ob[], items: [] as Item[], parts: [] as Part[], fires: [] as Fire[], dist: 0, next: 420, nextItem: 460, nextFire: 0, run: 0, spd: 165, lives: 3, inv: 0, shield: false, star: 0, slow: 0, boost: 0, gems: 0, pending: null as Plan | null, lastSafe: null as ("floor" | "ceil" | null), msFlag: 0, banner: null as (null | { text: string; t: number }) }; }
 // —— 玩家自有 AI 素材(切自3张图，透明底)；未加载时自动回退矢量，绝不因缺图崩溃 ——
-const SPR_NAMES = ["robot_run1", "robot_run2", "robot_run3", "robot_run4", "robot_run5", "robot_run6", "robot_run7", "robot_run8", "robot_run9", "robot_run10", "ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
+const SPR_NAMES = ["robot_run1", "robot_run2", "robot_run3", "robot_run4", "robot_run5", "robot_run6", "robot_run7", "robot_run8", "robot_run9", "robot_run10", "robot_run11", "robot_run12", "robot_run13", "robot_run14", "ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
 const SPR: Record<string, HTMLImageElement> = {};
 function sprite(name: string): HTMLImageElement | null { const im = SPR[name]; return im && im.complete && im.naturalWidth > 0 ? im : null; }
 function preloadSprites(onload: () => void) { if (typeof window === "undefined") return; for (const nm of SPR_NAMES) { if (SPR[nm]) continue; const im = new Image(); im.onload = onload; im.onerror = () => {}; im.src = `/games/gravity-run/${nm}.png`; SPR[nm] = im; } }
 function blit(ctx: CanvasRenderingContext2D, im: HTMLImageElement, x: number, y: number, w: number, h: number, flipV: boolean) { if (flipV) { ctx.save(); ctx.translate(0, y + h); ctx.scale(1, -1); ctx.drawImage(im, x, 0, w, h); ctx.restore(); } else ctx.drawImage(im, x, y, w, h); }
 function blitRot(ctx: CanvasRenderingContext2D, im: HTMLImageElement, cx: number, cy: number, w: number, h: number, ang: number) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); }
-function robotFrame(run: number) { const f = Math.floor(run * 2.6) % 10; return sprite("robot_run" + (f + 1)) || sprite("robot_run1"); }
+function robotFrame(run: number) { const f = Math.floor(run * 3.6) % 14; return sprite("robot_run" + (f + 1)) || sprite("robot_run1"); }
 function opp(s: "floor" | "ceil"): "floor" | "ceil" { return s === "floor" ? "ceil" : "floor"; }
 // 速度上限随里程递增：0–5km 470；5–10km 升到 570；10km 后炼狱最高 720
 function capAt(m: number) { return m < 5000 ? 470 : m < 10000 ? 470 + (m - 5000) / 5000 * 100 : Math.min(720, 570 + (m - 10000) / 5000 * 150); }
