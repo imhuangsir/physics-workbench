@@ -331,65 +331,17 @@ function drawFire(ctx: CanvasRenderingContext2D, fr: Fire) {
   ctx.fillStyle = "#ff6a2a"; ctx.beginPath(); ctx.arc(fr.x, fr.y, r * 0.62, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "#ffd680"; ctx.beginPath(); ctx.arc(fr.x - 1, fr.y - 1, r * 0.34, 0, Math.PI * 2); ctx.fill();
 }
-// 2-骨骼 IK：给定髋(hx,hy)与目标脚(fx,fy)，解出膝盖，画大腿+小腿+脚(膝向前弯，跑姿自然)
-function ikLeg(ctx: CanvasRenderingContext2D, hx: number, hy: number, fx: number, fy: number, L1: number, L2: number, col: string, lw: number, footCol: string) {
-  let dx = fx - hx, dy = fy - hy, d = Math.hypot(dx, dy); const max = L1 + L2 - 0.01;
-  if (d > max) { dx *= max / d; dy *= max / d; d = max; } if (d < 0.01) d = 0.01;
-  const base = Math.atan2(dy, dx);
-  let c = (L1 * L1 + d * d - L2 * L2) / (2 * L1 * d); c = Math.max(-1, Math.min(1, c));
-  const ha = Math.acos(c), kx = hx + Math.cos(base - ha) * L1, ky = hy + Math.sin(base - ha) * L1, fxc = hx + dx, fyc = hy + dy;
-  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round";
-  ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(kx, ky); ctx.lineTo(fxc, fyc); ctx.stroke();
-  ctx.fillStyle = footCol; ctx.beginPath(); ctx.ellipse(fxc + 1.6, fyc + 0.4, 3.8, 2.4, 0, 0, Math.PI * 2); ctx.fill();
-}
-// 摆臂：肩(sx,sy)+相位 → 上臂/前臂弯曲摆动
-function drawArm(ctx: CanvasRenderingContext2D, sx: number, sy: number, ph: number, col: string, lw: number) {
-  const sw = Math.sin(ph), up = Math.PI / 2 + sw * 0.85;
-  const ex = sx + Math.cos(up) * 5.5, ey = sy + Math.sin(up) * 5.5;
-  const fo = up - 0.7 - Math.max(0, sw) * 0.5, hx = ex + Math.cos(fo) * 5, hy = ey + Math.sin(fo) * 5;
-  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round";
-  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
-  ctx.beginPath(); ctx.arc(hx, hy, lw * 0.6, 0, Math.PI * 2); ctx.fill();
-}
+// 机器人：CC0 贴图 8 帧跑步循环。脚底对齐地面、居中于 x、天花板奔跑时上下翻转。
+// 贴图未加载时不画(不再有矢量"旧形象"占位)——素材是同源静态资源，加载极快。
 function drawRobot(ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, run: number, s: S) {
+  const rim = robotFrame(run); if (!rim) return;
   const now = performance.now(), TAU = Math.PI * 2;
-  const rim = robotFrame(run);
-  if (rim) { // CC0 贴图：脚底对齐地面，居中于 x，天花板时上下翻转
-    ctx.save(); ctx.translate(x, y); ctx.scale(1, dir);
-    if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 3, 0, 0, 30), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill(); }
-    const HH = 46, WW = HH * rim.naturalWidth / rim.naturalHeight;
-    ctx.drawImage(rim, -WW / 2, (PR + 2) - HH, WW, HH);
-    ctx.restore();
-    if (s.shield) { ctx.save(); ctx.strokeStyle = "rgba(56,189,248,0.9)"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(56,189,248,0.12)"; ctx.beginPath(); ctx.arc(x, y, PR + 10, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
-    return;
-  }
-  ctx.save(); ctx.translate(x, y); ctx.scale(1, dir); // 天花板奔跑上下翻转(矢量兜底)
-  if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 3, 0, 0, 26), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 26, 0, TAU); ctx.fill(); }
-  const p = run; // 奔跑相位
-  const bob = Math.abs(Math.cos(p)) * 1.8, hipY = 1 - bob, GROUND = PR; // 腾空抬高、触地落下；脚落到地面线
-  const L1 = 8, L2 = 8, stride = 7, lift = 9;
-  const foot = (hx: number, ph: number) => { const sw = Math.sin(ph), lf = Math.max(0, Math.sin(ph + 0.2)); return { fx: hx + sw * stride, fy: GROUND - lf * lift }; };
-  // 后腿/后臂(偏暗、错位) → 躯干 → 头 → 前臂/前腿
-  const bl = foot(-3, p + Math.PI); ikLeg(ctx, -3, hipY, bl.fx, bl.fy, L1, L2, "#4a3c96", 5, "#241d52");
-  ctx.fillStyle = "#6f52d6"; drawArm(ctx, -5.5, hipY - 8, p, "#6f52d6", 4);
-  const body = ctx.createLinearGradient(-9, hipY - 12, 9, hipY + 3); body.addColorStop(0, "#cdbcff"); body.addColorStop(0.45, "#9a7cf8"); body.addColorStop(1, "#6f52d6"); ctx.fillStyle = body; rr(ctx, -9, hipY - 12, 18, 15, 6);
-  ctx.fillStyle = "rgba(255,255,255,0.24)"; rr(ctx, -6.5, hipY - 10, 4, 11, 2);
-  ctx.strokeStyle = "rgba(40,28,80,0.32)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-9, hipY - 4); ctx.lineTo(9, hipY - 4); ctx.stroke();
-  const cy = hipY - 5, pulse = 0.55 + 0.45 * Math.sin(now / 180);
-  const cg = ctx.createRadialGradient(0, cy, 0.5, 0, cy, 6); cg.addColorStop(0, `rgba(150,255,235,${pulse})`); cg.addColorStop(1, "rgba(90,220,200,0)"); ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, cy, 6, 0, TAU); ctx.fill();
-  ctx.fillStyle = "#0f766e"; ctx.beginPath(); ctx.arc(0, cy, 3, 0, TAU); ctx.fill(); ctx.fillStyle = `rgba(205,255,248,${0.6 + 0.4 * pulse})`; ctx.beginPath(); ctx.arc(0, cy, 1.6, 0, TAU); ctx.fill();
-  const hy0 = hipY - 23;
-  const hg = ctx.createLinearGradient(0, hy0, 0, hy0 + 12); hg.addColorStop(0, "#e7e0ff"); hg.addColorStop(1, "#a58ff2"); ctx.fillStyle = hg; rr(ctx, -7, hy0, 14, 12, 5);
-  ctx.fillStyle = "#6f52d6"; ctx.beginPath(); ctx.arc(-7, hy0 + 6, 2, 0, TAU); ctx.arc(7, hy0 + 6, 2, 0, TAU); ctx.fill();
-  ctx.fillStyle = "#171a33"; rr(ctx, -5.5, hy0 + 2.6, 11, 6, 3);
-  const eg = ctx.createLinearGradient(-5, 0, 5, 0); eg.addColorStop(0, "#5eead4"); eg.addColorStop(0.5, "#b6fff2"); eg.addColorStop(1, "#5eead4"); ctx.fillStyle = eg; rr(ctx, -4, hy0 + 4.2, 8, 2.6, 1.3);
-  ctx.strokeStyle = "#a58ff2"; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, hy0); ctx.lineTo(0, hy0 - 5); ctx.stroke();
-  const blink = Math.sin(now / 150) > 0; if (blink) { const bl2 = ctx.createRadialGradient(0, hy0 - 6, 0, 0, hy0 - 6, 4); bl2.addColorStop(0, "rgba(255,120,150,0.9)"); bl2.addColorStop(1, "rgba(255,120,150,0)"); ctx.fillStyle = bl2; ctx.beginPath(); ctx.arc(0, hy0 - 6, 4, 0, TAU); ctx.fill(); }
-  ctx.fillStyle = blink ? "#ff5a7a" : "#7a2a3a"; ctx.beginPath(); ctx.arc(0, hy0 - 6, 2, 0, TAU); ctx.fill();
-  ctx.fillStyle = "#8567e6"; drawArm(ctx, 5.5, hipY - 8, p + Math.PI, "#8567e6", 4.4);
-  const fl = foot(3, p); ikLeg(ctx, 3, hipY, fl.fx, fl.fy, L1, L2, "#5b4bb0", 5.4, "#2f2760");
+  ctx.save(); ctx.translate(x, y); ctx.scale(1, dir);
+  if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 3, 0, 0, 30), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill(); }
+  const HH = 46, WW = HH * rim.naturalWidth / rim.naturalHeight;
+  ctx.drawImage(rim, -WW / 2, (PR + 2) - HH, WW, HH);
   ctx.restore();
-  if (s.shield) { ctx.save(); ctx.strokeStyle = "rgba(56,189,248,0.9)"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(56,189,248,0.12)"; ctx.beginPath(); ctx.arc(x, y, PR + 9, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
+  if (s.shield) { ctx.save(); ctx.strokeStyle = "rgba(56,189,248,0.9)"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(56,189,248,0.12)"; ctx.beginPath(); ctx.arc(x, y, PR + 10, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
 }
 function drawHUD(ctx: CanvasRenderingContext2D, s: S) {
   const n = Math.max(3, s.lives), hi = sprite("item_heart");
