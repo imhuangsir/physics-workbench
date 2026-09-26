@@ -27,13 +27,15 @@ const PRE = [
 ];
 const HELL = { sT: [34, 6, 10], sB: [120, 22, 14], g: [72, 20, 16], gD: [40, 10, 10], hl: [120, 34, 22], sun: [255, 110, 40] };
 function fresh() { return { y: FLOOR - PR, vy: 0, dir: 1, obs: [] as Ob[], items: [] as Item[], parts: [] as Part[], fires: [] as Fire[], dist: 0, next: 420, nextItem: 460, nextFire: 0, run: 0, spd: 165, lives: 3, inv: 0, shield: false, star: 0, slow: 0, boost: 0, gems: 0, pending: null as Plan | null, lastSafe: null as ("floor" | "ceil" | null), msFlag: 0, banner: null as (null | { text: string; t: number }) }; }
-// —— 障碍/道具用玩家自有 AI 素材(切自3张图，透明底)；机器人改为矢量绘制，保证跑动动画连贯 ——
-const SPR_NAMES = ["ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
+// —— 机器人=CC0素材(gameart2d「The Robot」8帧跑步循环，切自 RobotFree.zip 的 Run(1..8)，公共外接框裁剪保连贯)；障碍/道具沿用玩家自有 AI 素材；缺图时回退矢量机器人，绝不崩 ——
+const SPR_NAMES = ["robot_run1", "robot_run2", "robot_run3", "robot_run4", "robot_run5", "robot_run6", "robot_run7", "robot_run8", "ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
 const SPR: Record<string, HTMLImageElement> = {};
 function sprite(name: string): HTMLImageElement | null { const im = SPR[name]; return im && im.complete && im.naturalWidth > 0 ? im : null; }
 function preloadSprites(onload: () => void) { if (typeof window === "undefined") return; for (const nm of SPR_NAMES) { if (SPR[nm]) continue; const im = new Image(); im.onload = onload; im.onerror = () => {}; im.src = `/games/gravity-run/${nm}.png`; SPR[nm] = im; } }
 function blit(ctx: CanvasRenderingContext2D, im: HTMLImageElement, x: number, y: number, w: number, h: number, flipV: boolean) { if (flipV) { ctx.save(); ctx.translate(0, y + h); ctx.scale(1, -1); ctx.drawImage(im, x, 0, w, h); ctx.restore(); } else ctx.drawImage(im, x, y, w, h); }
 function blitRot(ctx: CanvasRenderingContext2D, im: HTMLImageElement, cx: number, cy: number, w: number, h: number, ang: number) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); }
+// 8 帧跑步循环，帧速随里程相位 run 推进(cruise≈2.3循环/秒)；未加载返回 null → 用矢量兜底
+function robotFrame(run: number) { const f = Math.floor(run * 1.3) % 8; return sprite("robot_run" + (f + 1)); }
 function opp(s: "floor" | "ceil"): "floor" | "ceil" { return s === "floor" ? "ceil" : "floor"; }
 // 速度上限随里程递增：0–5km 470；5–10km 升到 570；10km 后炼狱最高 720
 function capAt(m: number) { return m < 5000 ? 470 : m < 10000 ? 470 + (m - 5000) / 5000 * 100 : Math.min(720, 570 + (m - 10000) / 5000 * 150); }
@@ -351,7 +353,17 @@ function drawArm(ctx: CanvasRenderingContext2D, sx: number, sy: number, ph: numb
 }
 function drawRobot(ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, run: number, s: S) {
   const now = performance.now(), TAU = Math.PI * 2;
-  ctx.save(); ctx.translate(x, y); ctx.scale(1, dir); // 天花板奔跑上下翻转
+  const rim = robotFrame(run);
+  if (rim) { // CC0 贴图：脚底对齐地面，居中于 x，天花板时上下翻转
+    ctx.save(); ctx.translate(x, y); ctx.scale(1, dir);
+    if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 3, 0, 0, 30), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill(); }
+    const HH = 46, WW = HH * rim.naturalWidth / rim.naturalHeight;
+    ctx.drawImage(rim, -WW / 2, (PR + 2) - HH, WW, HH);
+    ctx.restore();
+    if (s.shield) { ctx.save(); ctx.strokeStyle = "rgba(56,189,248,0.9)"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(56,189,248,0.12)"; ctx.beginPath(); ctx.arc(x, y, PR + 10, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
+    return;
+  }
+  ctx.save(); ctx.translate(x, y); ctx.scale(1, dir); // 天花板奔跑上下翻转(矢量兜底)
   if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 3, 0, 0, 26), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 26, 0, TAU); ctx.fill(); }
   const p = run; // 奔跑相位
   const bob = Math.abs(Math.cos(p)) * 1.8, hipY = 1 - bob, GROUND = PR; // 腾空抬高、触地落下；脚落到地面线

@@ -1,1 +1,6 @@
-本目录美术为用户用 AI 生成的自有素材(切自3张 sprite sheet)，仅用于本项目。
+障碍物 / 道具 (ob_*.png, item_*.png)：用户用 AI 生成的自有素材(切自3张 sprite sheet)，仅用于本项目。
+
+机器人跑步 8 帧 (robot_run1..8.png)：来自 gameart2d.com「The Robot」免费素材包(作者 pzUH)，
+经 OpenGameArt 以 CC0(公共领域，无需署名)发布。
+来源：https://opengameart.org/content/the-robot-free-sprite
+取自 RobotFree.zip 的 Run (1..8).png，按 8 帧共同外接框裁剪、缩放到高 140px，未做任何抠图。
