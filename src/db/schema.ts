@@ -122,3 +122,14 @@ export const uploads = sqliteTable("uploads", {
   data: text("data").notNull(),
   createdAt: integer("created_at").notNull().$defaultFn(nowSec),
 });
+
+// 小游戏最高分：每个学生每个游戏一行(存历史最高)，用于展示"我的最高"与"全班最高"。
+// classId 冗余存一份，方便按班取全班最高，无需连表。
+export const gameScores = sqliteTable("game_scores", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  studentId: integer("student_id").notNull().references(() => students.id),
+  classId: integer("class_id").notNull().references(() => classes.id),
+  game: text("game").notNull(),
+  best: integer("best").notNull().default(0),
+  updatedAt: integer("updated_at").notNull().$defaultFn(nowSec),
+}, (t) => ({ uniqOne: unique().on(t.studentId, t.game) }));

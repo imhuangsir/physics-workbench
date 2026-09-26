@@ -43,6 +43,13 @@
       "when": 1790339836364,
       "tag": "0005_mighty_junta",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1790412137669,
+      "tag": "0006_peaceful_patriot",
+      "breakpoints": true
     }
   ]
 }

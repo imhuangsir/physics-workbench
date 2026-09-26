@@ -1,6 +1,9 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { fitCanvas, useRafLoop } from "@/components/demos/canvas";
+import { getSession } from "@/lib/client/auth";
+
+const GAME_KEY = "gravity-run";
 
 const W = 520, H = 320, CEIL = 34, FLOOR = 286, PX = 96, PR = 15, G = 2200, MID = (CEIL + FLOOR) / 2, LANE = 2 * PR + 34;
 type OKind = "spike" | "crate" | "saw" | "drone" | "laser" | "gate" | "pad";
@@ -24,14 +27,13 @@ const PRE = [
 ];
 const HELL = { sT: [34, 6, 10], sB: [120, 22, 14], g: [72, 20, 16], gD: [40, 10, 10], hl: [120, 34, 22], sun: [255, 110, 40] };
 function fresh() { return { y: FLOOR - PR, vy: 0, dir: 1, obs: [] as Ob[], items: [] as Item[], parts: [] as Part[], fires: [] as Fire[], dist: 0, next: 420, nextItem: 460, nextFire: 0, run: 0, spd: 165, lives: 3, inv: 0, shield: false, star: 0, slow: 0, boost: 0, gems: 0, pending: null as Plan | null, lastSafe: null as ("floor" | "ceil" | null), msFlag: 0, banner: null as (null | { text: string; t: number }) }; }
-// —— 玩家自有 AI 素材(切自3张图，透明底)；未加载时自动回退矢量，绝不因缺图崩溃 ——
-const SPR_NAMES = ["robot_run1", "robot_run2", "robot_run3", "robot_run4", "robot_run5", "robot_run6", "robot_run7", "robot_run8", "robot_run9", "robot_run10", "robot_run11", "robot_run12", "robot_run13", "robot_run14", "ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
+// —— 障碍/道具用玩家自有 AI 素材(切自3张图，透明底)；机器人改为矢量绘制，保证跑动动画连贯 ——
+const SPR_NAMES = ["ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
 const SPR: Record<string, HTMLImageElement> = {};
 function sprite(name: string): HTMLImageElement | null { const im = SPR[name]; return im && im.complete && im.naturalWidth > 0 ? im : null; }
 function preloadSprites(onload: () => void) { if (typeof window === "undefined") return; for (const nm of SPR_NAMES) { if (SPR[nm]) continue; const im = new Image(); im.onload = onload; im.onerror = () => {}; im.src = `/games/gravity-run/${nm}.png`; SPR[nm] = im; } }
 function blit(ctx: CanvasRenderingContext2D, im: HTMLImageElement, x: number, y: number, w: number, h: number, flipV: boolean) { if (flipV) { ctx.save(); ctx.translate(0, y + h); ctx.scale(1, -1); ctx.drawImage(im, x, 0, w, h); ctx.restore(); } else ctx.drawImage(im, x, y, w, h); }
 function blitRot(ctx: CanvasRenderingContext2D, im: HTMLImageElement, cx: number, cy: number, w: number, h: number, ang: number) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); }
-function robotFrame(run: number) { const f = Math.floor(run * 1.0) % 14; return sprite("robot_run" + (f + 1)) || sprite("robot_run1"); }
 function opp(s: "floor" | "ceil"): "floor" | "ceil" { return s === "floor" ? "ceil" : "floor"; }
 // 速度上限随里程递增：0–5km 470；5–10km 升到 570；10km 后炼狱最高 720
 function capAt(m: number) { return m < 5000 ? 470 : m < 10000 ? 470 + (m - 5000) / 5000 * 100 : Math.min(720, 570 + (m - 10000) / 5000 * 150); }
@@ -43,12 +45,33 @@ export function GravityRunGame() {
   const [playing, setPlaying] = useState(false);
   const [over, setOver] = useState(false);
   const [score, setScore] = useState(0);
-  const [best, setBest] = useState(0);
+  const [myBest, setMyBest] = useState(0);
+  const [classBest, setClassBest] = useState(0);
   const [gems, setGems] = useState(0);
   const [err, setErr] = useState<string | null>(null);
   const [, bumpLoad] = useState(0);
   const st = useRef<S>(fresh());
   useEffect(() => { preloadSprites(() => bumpLoad((x) => x + 1)); }, []);
+  // 进游戏就拉取历史最高分(个人+全班)，不再是"退出即销毁"
+  useEffect(() => { loadScores(); }, []);
+
+  async function loadScores() {
+    const s = getSession(); if (!s?.token) return;
+    try {
+      const res = await fetch(`/api/student/game-scores?game=${GAME_KEY}`, { headers: { Authorization: `Bearer ${s.token}` } });
+      const j = await res.json().catch(() => ({})) as { data?: { best: number; classBest: number } };
+      if (res.ok && j.data) { setMyBest(j.data.best); setClassBest(j.data.classBest); }
+    } catch { /* 离线/未登录：仅用本局，不打扰 */ }
+  }
+  async function saveScore(sc: number) {
+    const s = getSession(); if (!s?.token) { setMyBest((b) => Math.max(b, sc)); return; }
+    try {
+      const res = await fetch("/api/student/game-scores", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${s.token}` }, body: JSON.stringify({ game: GAME_KEY, score: sc }) });
+      const j = await res.json().catch(() => ({})) as { data?: { best: number; classBest: number } };
+      if (res.ok && j.data) { setMyBest(j.data.best); setClassBest(j.data.classBest); }
+      else setMyBest((b) => Math.max(b, sc));
+    } catch { setMyBest((b) => Math.max(b, sc)); }
+  }
 
   function reset() { st.current = fresh(); setScore(0); setGems(0); setOver(false); setErr(null); }
   function planOb(dist: number, prevSafe: "floor" | "ceil" | null): Plan {
@@ -88,7 +111,7 @@ export function GravityRunGame() {
     const s = st.current; if (s.inv > 0 || s.star > 0) return;
     if (s.shield) { s.shield = false; s.inv = 1.0; spark("#38bdf8"); return; }
     s.lives -= 1; s.inv = 1.5; spark("#f43f5e");
-    if (s.lives <= 0) { setBest((b) => Math.max(b, Math.floor(s.dist / 10))); setOver(true); setPlaying(false); }
+    if (s.lives <= 0) { saveScore(Math.floor(s.dist / 10)); setOver(true); setPlaying(false); }
   }
   function hit(py: number, r: { x: number; y: number; w: number; h: number }) { return PX + PR - 4 > r.x && PX - PR + 4 < r.x + r.w && py + PR - 4 > r.y && py - PR + 4 < r.y + r.h; }
 
@@ -163,12 +186,13 @@ export function GravityRunGame() {
     <div className="space-y-3">
       <div className="relative mx-auto w-full max-w-[720px]">
         <canvas ref={canvasRef} onClick={tap} className="w-full cursor-pointer rounded-2xl border border-border" />
-        {over && (<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/80"><p className="text-lg font-bold">撞毁了！跑了 {score} m</p><button className="rounded-lg bg-foreground px-4 py-1.5 text-sm font-semibold text-background" onClick={tap}>再来一局</button></div>)}
+        {over && (<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/80"><p className="text-lg font-bold">撞毁了！跑了 {score} m</p><p className="text-sm text-muted-foreground">我的最高 {myBest} m · 全班最高 {classBest} m</p><button className="rounded-lg bg-foreground px-4 py-1.5 text-sm font-semibold text-background" onClick={tap}>再来一局</button></div>)}
         {err && (<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/90 p-4 text-center"><p className="text-sm font-semibold">游戏出了点问题</p><p className="max-w-[90%] break-words text-xs text-muted-foreground">{err}</p><button className="rounded-lg bg-foreground px-4 py-1.5 text-sm font-semibold text-background" onClick={() => { reset(); setPlaying(true); }}>重试</button></div>)}
       </div>
       <div className="flex flex-wrap items-center gap-3">
-        <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">距离 <b className="num">{score}</b> m</div>
-        <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">最远 <b className="num">{best}</b> m</div>
+        <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">本次 <b className="num">{score}</b> m</div>
+        <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">我的最高 <b className="num">{myBest}</b> m</div>
+        <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">全班最高 <b className="num">{classBest}</b> m</div>
         <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">道具 <b className="num">{gems}</b></div>
       </div>
       <p className="text-xs text-muted-foreground">点击（或空格）<b>翻转重力</b>，小机器人在地面/天花板间奔跑。<b>3 条命</b>（左上爱心），撞到会掉血并短暂无敌闪烁。障碍各有机制：尖锐<b>地刺</b>、<b>木箱</b>、旋转<b>锯片</b>、乱窜<b>无人机</b>、只能走一侧的<b>护栏门</b>、定时<b>激光</b>、还有会<b>强行加速</b>让你更难躲的加速带。沿途捡道具：<b>❤补血</b>、<b>护盾</b>（挡一次）、<b>⭐无敌冲刺</b>、<b>时缓</b>。背景由浅到深随里程推进；<b>5km 起障碍变高变快</b>，<b>1 万米进入炼狱阶段</b>（红色天地 + 高速<b>火球</b>来袭），比谁跑得远！</p>
@@ -305,46 +329,55 @@ function drawFire(ctx: CanvasRenderingContext2D, fr: Fire) {
   ctx.fillStyle = "#ff6a2a"; ctx.beginPath(); ctx.arc(fr.x, fr.y, r * 0.62, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = "#ffd680"; ctx.beginPath(); ctx.arc(fr.x - 1, fr.y - 1, r * 0.34, 0, Math.PI * 2); ctx.fill();
 }
-function drawLeg(ctx: CanvasRenderingContext2D, ox: number, sw: number) {
-  ctx.save(); ctx.translate(ox, 6); const kx = Math.sin(sw * 0.5) * 5, ky = 5, fx = kx + Math.sin(sw) * 4;
-  ctx.strokeStyle = "#5b4bb0"; ctx.lineWidth = 4; ctx.lineCap = "round"; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(kx, ky); ctx.lineTo(fx, ky + 6); ctx.stroke();
-  ctx.fillStyle = "#2f2760"; ctx.beginPath(); ctx.ellipse(fx, ky + 7, 3.4, 2.2, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+// 2-骨骼 IK：给定髋(hx,hy)与目标脚(fx,fy)，解出膝盖，画大腿+小腿+脚(膝向前弯，跑姿自然)
+function ikLeg(ctx: CanvasRenderingContext2D, hx: number, hy: number, fx: number, fy: number, L1: number, L2: number, col: string, lw: number, footCol: string) {
+  let dx = fx - hx, dy = fy - hy, d = Math.hypot(dx, dy); const max = L1 + L2 - 0.01;
+  if (d > max) { dx *= max / d; dy *= max / d; d = max; } if (d < 0.01) d = 0.01;
+  const base = Math.atan2(dy, dx);
+  let c = (L1 * L1 + d * d - L2 * L2) / (2 * L1 * d); c = Math.max(-1, Math.min(1, c));
+  const ha = Math.acos(c), kx = hx + Math.cos(base - ha) * L1, ky = hy + Math.sin(base - ha) * L1, fxc = hx + dx, fyc = hy + dy;
+  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(kx, ky); ctx.lineTo(fxc, fyc); ctx.stroke();
+  ctx.fillStyle = footCol; ctx.beginPath(); ctx.ellipse(fxc + 1.6, fyc + 0.4, 3.8, 2.4, 0, 0, Math.PI * 2); ctx.fill();
+}
+// 摆臂：肩(sx,sy)+相位 → 上臂/前臂弯曲摆动
+function drawArm(ctx: CanvasRenderingContext2D, sx: number, sy: number, ph: number, col: string, lw: number) {
+  const sw = Math.sin(ph), up = Math.PI / 2 + sw * 0.85;
+  const ex = sx + Math.cos(up) * 5.5, ey = sy + Math.sin(up) * 5.5;
+  const fo = up - 0.7 - Math.max(0, sw) * 0.5, hx = ex + Math.cos(fo) * 5, hy = ey + Math.sin(fo) * 5;
+  ctx.strokeStyle = col; ctx.lineWidth = lw; ctx.lineCap = "round"; ctx.lineJoin = "round";
+  ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.lineTo(hx, hy); ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx, hy, lw * 0.6, 0, Math.PI * 2); ctx.fill();
 }
 function drawRobot(ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, run: number, s: S) {
   const now = performance.now(), TAU = Math.PI * 2;
-  const rim = robotFrame(run);
-  if (rim) {
-    ctx.save(); ctx.translate(x, y); ctx.scale(1, dir);
-    if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 3, 0, 0, 30), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill(); }
-    const H = 44, W = H * rim.naturalWidth / rim.naturalHeight;
-    ctx.drawImage(rim, -W / 2, PR + 3 - H, W, H);
-    ctx.restore();
-    if (s.shield) { ctx.save(); ctx.strokeStyle = "rgba(56,189,248,0.9)"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(56,189,248,0.12)"; ctx.beginPath(); ctx.arc(x, y, PR + 10, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
-    return;
-  }
-  ctx.save(); ctx.translate(x, y); ctx.scale(1, dir); ctx.scale(0.82, 0.82);
+  ctx.save(); ctx.translate(x, y); ctx.scale(1, dir); // 天花板奔跑上下翻转
   if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 3, 0, 0, 26), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 26, 0, TAU); ctx.fill(); }
-  const s1 = Math.sin(run), s2 = Math.sin(run + Math.PI);
-  drawLeg(ctx, -4, s1); drawLeg(ctx, 4, s2);
-  ctx.save(); ctx.translate(7, -3); ctx.rotate(-s1 * 0.5); ctx.fillStyle = "#5b4bb0"; rr(ctx, -2.4, 0, 4.8, 10, 2.4); ctx.restore();
-  const body = ctx.createLinearGradient(-11, -10, 11, 9); body.addColorStop(0, "#cdbcff"); body.addColorStop(0.45, "#9a7cf8"); body.addColorStop(1, "#6f52d6"); ctx.fillStyle = body; rr(ctx, -11, -10, 22, 20, 7);
-  ctx.fillStyle = "#7c5cf6"; rr(ctx, -12.5, -9, 5, 8, 2.5); rr(ctx, 7.5, -9, 5, 8, 2.5);
-  ctx.fillStyle = "rgba(255,255,255,0.26)"; rr(ctx, -8, -7, 5, 14, 2.5);
-  ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1.3; ctx.beginPath(); ctx.moveTo(9, -6); ctx.lineTo(9, 5); ctx.stroke();
-  ctx.strokeStyle = "rgba(40,28,80,0.4)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-11, 0); ctx.lineTo(11, 0); ctx.stroke();
-  const pulse = 0.55 + 0.45 * Math.sin(now / 180);
-  const cg = ctx.createRadialGradient(0, 2, 0.5, 0, 2, 6); cg.addColorStop(0, `rgba(150,255,235,${pulse})`); cg.addColorStop(1, "rgba(90,220,200,0)"); ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, 2, 6, 0, TAU); ctx.fill();
-  ctx.fillStyle = "#0f766e"; ctx.beginPath(); ctx.arc(0, 2, 3, 0, TAU); ctx.fill(); ctx.fillStyle = `rgba(205,255,248,${0.6 + 0.4 * pulse})`; ctx.beginPath(); ctx.arc(0, 2, 1.6, 0, TAU); ctx.fill();
-  ctx.save(); ctx.translate(-7, -3); ctx.rotate(s1 * 0.6); ctx.fillStyle = "#8567e6"; rr(ctx, -2.4, 0, 4.8, 10, 2.4); ctx.fillStyle = "#c9bdff"; ctx.beginPath(); ctx.arc(0, 10, 2.4, 0, TAU); ctx.fill(); ctx.restore();
-  const hg = ctx.createLinearGradient(0, -22, 0, -9); hg.addColorStop(0, "#e7e0ff"); hg.addColorStop(1, "#a58ff2"); ctx.fillStyle = hg; rr(ctx, -8, -22, 16, 13, 6);
-  ctx.fillStyle = "#6f52d6"; ctx.beginPath(); ctx.arc(-8, -15, 2.2, 0, TAU); ctx.arc(8, -15, 2.2, 0, TAU); ctx.fill();
-  ctx.fillStyle = "#171a33"; rr(ctx, -6, -20, 12, 7, 3.4);
-  const eg = ctx.createLinearGradient(-5, 0, 5, 0); eg.addColorStop(0, "#5eead4"); eg.addColorStop(0.5, "#b6fff2"); eg.addColorStop(1, "#5eead4"); ctx.fillStyle = eg; rr(ctx, -4.5, -18.4, 9, 3, 1.5);
-  ctx.strokeStyle = "#a58ff2"; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, -22); ctx.lineTo(0, -27); ctx.stroke();
-  const blink = Math.sin(now / 150) > 0; if (blink) { const bl = ctx.createRadialGradient(0, -28, 0, 0, -28, 4); bl.addColorStop(0, "rgba(255,120,150,0.9)"); bl.addColorStop(1, "rgba(255,120,150,0)"); ctx.fillStyle = bl; ctx.beginPath(); ctx.arc(0, -28, 4, 0, TAU); ctx.fill(); }
-  ctx.fillStyle = blink ? "#ff5a7a" : "#7a2a3a"; ctx.beginPath(); ctx.arc(0, -28, 2, 0, TAU); ctx.fill();
+  const p = run; // 奔跑相位
+  const bob = Math.abs(Math.cos(p)) * 1.8, hipY = 1 - bob, GROUND = PR; // 腾空抬高、触地落下；脚落到地面线
+  const L1 = 8, L2 = 8, stride = 7, lift = 9;
+  const foot = (hx: number, ph: number) => { const sw = Math.sin(ph), lf = Math.max(0, Math.sin(ph + 0.2)); return { fx: hx + sw * stride, fy: GROUND - lf * lift }; };
+  // 后腿/后臂(偏暗、错位) → 躯干 → 头 → 前臂/前腿
+  const bl = foot(-3, p + Math.PI); ikLeg(ctx, -3, hipY, bl.fx, bl.fy, L1, L2, "#4a3c96", 5, "#241d52");
+  ctx.fillStyle = "#6f52d6"; drawArm(ctx, -5.5, hipY - 8, p, "#6f52d6", 4);
+  const body = ctx.createLinearGradient(-9, hipY - 12, 9, hipY + 3); body.addColorStop(0, "#cdbcff"); body.addColorStop(0.45, "#9a7cf8"); body.addColorStop(1, "#6f52d6"); ctx.fillStyle = body; rr(ctx, -9, hipY - 12, 18, 15, 6);
+  ctx.fillStyle = "rgba(255,255,255,0.24)"; rr(ctx, -6.5, hipY - 10, 4, 11, 2);
+  ctx.strokeStyle = "rgba(40,28,80,0.32)"; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-9, hipY - 4); ctx.lineTo(9, hipY - 4); ctx.stroke();
+  const cy = hipY - 5, pulse = 0.55 + 0.45 * Math.sin(now / 180);
+  const cg = ctx.createRadialGradient(0, cy, 0.5, 0, cy, 6); cg.addColorStop(0, `rgba(150,255,235,${pulse})`); cg.addColorStop(1, "rgba(90,220,200,0)"); ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(0, cy, 6, 0, TAU); ctx.fill();
+  ctx.fillStyle = "#0f766e"; ctx.beginPath(); ctx.arc(0, cy, 3, 0, TAU); ctx.fill(); ctx.fillStyle = `rgba(205,255,248,${0.6 + 0.4 * pulse})`; ctx.beginPath(); ctx.arc(0, cy, 1.6, 0, TAU); ctx.fill();
+  const hy0 = hipY - 23;
+  const hg = ctx.createLinearGradient(0, hy0, 0, hy0 + 12); hg.addColorStop(0, "#e7e0ff"); hg.addColorStop(1, "#a58ff2"); ctx.fillStyle = hg; rr(ctx, -7, hy0, 14, 12, 5);
+  ctx.fillStyle = "#6f52d6"; ctx.beginPath(); ctx.arc(-7, hy0 + 6, 2, 0, TAU); ctx.arc(7, hy0 + 6, 2, 0, TAU); ctx.fill();
+  ctx.fillStyle = "#171a33"; rr(ctx, -5.5, hy0 + 2.6, 11, 6, 3);
+  const eg = ctx.createLinearGradient(-5, 0, 5, 0); eg.addColorStop(0, "#5eead4"); eg.addColorStop(0.5, "#b6fff2"); eg.addColorStop(1, "#5eead4"); ctx.fillStyle = eg; rr(ctx, -4, hy0 + 4.2, 8, 2.6, 1.3);
+  ctx.strokeStyle = "#a58ff2"; ctx.lineWidth = 1.6; ctx.beginPath(); ctx.moveTo(0, hy0); ctx.lineTo(0, hy0 - 5); ctx.stroke();
+  const blink = Math.sin(now / 150) > 0; if (blink) { const bl2 = ctx.createRadialGradient(0, hy0 - 6, 0, 0, hy0 - 6, 4); bl2.addColorStop(0, "rgba(255,120,150,0.9)"); bl2.addColorStop(1, "rgba(255,120,150,0)"); ctx.fillStyle = bl2; ctx.beginPath(); ctx.arc(0, hy0 - 6, 4, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = blink ? "#ff5a7a" : "#7a2a3a"; ctx.beginPath(); ctx.arc(0, hy0 - 6, 2, 0, TAU); ctx.fill();
+  ctx.fillStyle = "#8567e6"; drawArm(ctx, 5.5, hipY - 8, p + Math.PI, "#8567e6", 4.4);
+  const fl = foot(3, p); ikLeg(ctx, 3, hipY, fl.fx, fl.fy, L1, L2, "#5b4bb0", 5.4, "#2f2760");
   ctx.restore();
-  if (s.shield) { ctx.save(); ctx.strokeStyle = "rgba(56,189,248,0.9)"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(56,189,248,0.12)"; ctx.beginPath(); ctx.arc(x, y, PR + 8, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
+  if (s.shield) { ctx.save(); ctx.strokeStyle = "rgba(56,189,248,0.9)"; ctx.lineWidth = 2.5; ctx.fillStyle = "rgba(56,189,248,0.12)"; ctx.beginPath(); ctx.arc(x, y, PR + 9, 0, TAU); ctx.fill(); ctx.stroke(); ctx.restore(); }
 }
 function drawHUD(ctx: CanvasRenderingContext2D, s: S) {
   const n = Math.max(3, s.lives), hi = sprite("item_heart");
