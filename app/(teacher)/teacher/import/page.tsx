@@ -53,7 +53,7 @@ async function wordToText(file: File): Promise<string> {
   return String((await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() }))?.value ?? "");
 }
 /** Word → 文字(保留"图N"题注) + 图片(按"图N"或顺序编号，data URL，已压缩)。公式：能转成文字的保留，图片形式的按图导入。 */
-async function wordToRich(file: File): Promise<{ text: string; figs: Record<number, string> }> {
+async function wordToRich(file: File): Promise<{ text: string; figs: Record<number, string>; images: string[]; marked: string }> {
   const mammoth = (await import("mammoth/mammoth.browser.js")).default;
   const imgs: string[] = [];
   const options = {
@@ -76,13 +76,16 @@ async function wordToRich(file: File): Promise<{ text: string; figs: Record<numb
     });
   };
   walk(doc.body);
-  const capOf = imgs.map((_, k) => { const pos = text.indexOf(`\u0001${k}\u0001`); if (pos < 0) return 0; const m = text.slice(Math.max(0, pos - 8), pos + 40).match(/图\s*(\d+)/); return m ? Number(m[1]) : 0; });
+  const capOf = imgs.map((_, k) => { const pos = text.indexOf(`\u0001${k}\u0001`); if (pos < 0) return 0; const m = text.slice(pos, pos + 100).match(/图\s*(\d+)/) || text.slice(Math.max(0, pos - 40), pos).match(/图\s*(\d+)/); return m ? Number(m[1]) : 0; });
   const used = new Set<number>(capOf.filter(Boolean)); let seq = 0;
   const nextFree = () => { do { seq++; } while (used.has(seq)); used.add(seq); return seq; };
   const figs: Record<number, string> = {};
-  for (let k = 0; k < imgs.length; k++) { const n = capOf[k] || nextFree(); figs[n] = await compressToDataURL(imgs[k]); }
-  const clean = text.replace(/\u0001\d+\u0001/g, "").replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
-  return { text: clean, figs };
+  const images: string[] = []; const orig2surv: Record<number, number> = {};
+  for (let k = 0; k < imgs.length; k++) { const c = await compressToDataURL(imgs[k]); if (!c) continue; images.push(c); orig2surv[k] = images.length; const n = capOf[k] || nextFree(); figs[n] = c; }
+  const strip = (t: string) => t.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  const clean = strip(text.replace(/\u0001\d+\u0001/g, ""));
+  const marked = strip(text.replace(/\u0001(\d+)\u0001/g, (_m, kk) => { const su = orig2surv[Number(kk)]; return su ? `〖图${su}〗` : ""; }));
+  return { text: clean, figs, images, marked };
 }
 async function pdfToText(file: File): Promise<string> {
   const pdfjs = await import("pdfjs-dist");
@@ -108,6 +111,25 @@ export default function ImportPage() {
   const [chapter, setChapter] = useState("");
   const [ansFile, setAnsFile] = useState<File | null>(null);
   const [figs, setFigs] = useState<Record<number, string>>({});
+  const [figImgs, setFigImgs] = useState<string[]>([]);
+  const [figMarked, setFigMarked] = useState("");
+
+  async function aiMatchFigs() {
+    if (!figImgs.length) return toast.error("没有可配的图片");
+    if (!forms.length) return toast.error("请先切分出题目");
+    setBusy(true);
+    try {
+      const r = await api<{ map: Record<string, number> }>("/api/teacher/match-figures", { method: "POST", body: JSON.stringify({ text: figMarked, questions: forms.map((f) => f.stem) }) });
+      const map = r.map || {};
+      setForms((arr) => {
+        const next = arr.map((f) => ({ ...f, images: [] as string[] }));
+        for (let k = 1; k <= figImgs.length; k++) { const q = Number(map[String(k)]); if (q >= 1 && q <= next.length) next[q - 1].images.push(figImgs[k - 1]); }
+        return next;
+      });
+      toast.success("AI 已按图片内容/位置重新配图，请核对");
+    } catch (e) { toast.error(e instanceof Error ? e.message : "配图失败"); }
+    finally { setBusy(false); }
+  }
 
   function attachFigs(fs: FormState[]): FormState[] {
     if (!Object.keys(figs).length) return fs;
@@ -123,9 +145,9 @@ export default function ImportPage() {
     setBusy(true); setForms([]);
     try {
       let t = "", figCount = 0;
-      if (source === "image") { t = await ocrToText(file); setFigs({}); }
-      else if (source === "word") { const r = await wordToRich(file); t = r.text; setFigs(r.figs); figCount = Object.keys(r.figs).length; }
-      else { t = await pdfToText(file); setFigs({}); }
+      if (source === "image") { t = await ocrToText(file); setFigs({}); setFigImgs([]); setFigMarked(""); }
+      else if (source === "word") { const r = await wordToRich(file); t = r.text; setFigs(r.figs); setFigImgs(r.images); setFigMarked(r.marked); figCount = r.images.length; }
+      else { t = await pdfToText(file); setFigs({}); setFigImgs([]); setFigMarked(""); }
       setText(t);
       if (!t.trim()) toast.error("没有提取到文字，换一种方式或检查文件");
       else toast.success(`提取完成${figCount ? `（含 ${figCount} 张配图，切题后按“图N”自动配到题上）` : ""}，点“AI 智能切题”`);
@@ -221,6 +243,13 @@ export default function ImportPage() {
       {forms.length > 0 && (
         <Card>
           <CardContent className="space-y-3 p-4">
+            {figImgs.length > 0 && (
+              <div className="space-y-1.5 border-b pb-3">
+                <p className="text-sm font-medium">配图（共 {figImgs.length} 张）· 已按「图N」自动配到各题</p>
+                <p className="text-xs text-muted-foreground">如果配错了题，点右侧让 <b>AI 按图片在原文的位置和题干引用重新配图</b>；也可在每道题表单里手动增删。</p>
+                <Button size="sm" variant="outline" onClick={aiMatchFigs} disabled={busy}>{busy ? "处理中…" : "AI 智能配图"}</Button>
+              </div>
+            )}
             <div className="space-y-1.5">
               <p className="text-sm font-medium">（可选）上传参考答案，自动填入各题答案</p>
               <p className="text-xs text-muted-foreground">支持答案的图片 / Word / PDF；AI 会把答案对应到上面各题并<b>覆盖</b>切题时给的答案，填完请核对。</p>

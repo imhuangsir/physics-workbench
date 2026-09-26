@@ -31,7 +31,7 @@ function sprite(name: string): HTMLImageElement | null { const im = SPR[name]; r
 function preloadSprites(onload: () => void) { if (typeof window === "undefined") return; for (const nm of SPR_NAMES) { if (SPR[nm]) continue; const im = new Image(); im.onload = onload; im.onerror = () => {}; im.src = `/games/gravity-run/${nm}.png`; SPR[nm] = im; } }
 function blit(ctx: CanvasRenderingContext2D, im: HTMLImageElement, x: number, y: number, w: number, h: number, flipV: boolean) { if (flipV) { ctx.save(); ctx.translate(0, y + h); ctx.scale(1, -1); ctx.drawImage(im, x, 0, w, h); ctx.restore(); } else ctx.drawImage(im, x, y, w, h); }
 function blitRot(ctx: CanvasRenderingContext2D, im: HTMLImageElement, cx: number, cy: number, w: number, h: number, ang: number) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); }
-function robotFrame(run: number) { const f = Math.floor(run * 3.6) % 14; return sprite("robot_run" + (f + 1)) || sprite("robot_run1"); }
+function robotFrame(run: number) { const f = Math.floor(run * 1.0) % 14; return sprite("robot_run" + (f + 1)) || sprite("robot_run1"); }
 function opp(s: "floor" | "ceil"): "floor" | "ceil" { return s === "floor" ? "ceil" : "floor"; }
 // 速度上限随里程递增：0–5km 470；5–10km 升到 570；10km 后炼狱最高 720
 function capAt(m: number) { return m < 5000 ? 470 : m < 10000 ? 470 + (m - 5000) / 5000 * 100 : Math.min(720, 570 + (m - 10000) / 5000 * 150); }

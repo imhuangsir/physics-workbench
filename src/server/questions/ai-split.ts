@@ -42,6 +42,21 @@ export async function aiSplit(env: AppEnv, text: string): Promise<AiDraft[]> {
     }));
 }
 
+const MATCH_SYSTEM = `你是初中物理老师的助教。给你一段试卷文字，其中用「〖图k〗」标出了第 k 张配图在原文出现的位置；随后给你一份按顺序编号(1..N)的题目列表。请判断每一张配图属于哪一道题——依据它在文字中的位置、以及题干里对"图N/如图所示"之类的引用。
+只输出 JSON：{"map":{"1":题号,"2":题号,...}}。键是图片编号 k(字符串)，值是题目列表里的序号(整数，从 1 开始)，无法判断就填 0。不要输出任何多余说明。`;
+
+/** 让 AI 依据"图片在原文的位置 + 题干对图的引用"，把每张配图对应到某道题。返回 { 图片k(字符串): 题号(1基,0=未知) }。 */
+export async function matchFigures(env: AppEnv, marked: string, questions: string[]): Promise<Record<string, number>> {
+  const cfg = aiConfig(env);
+  const list = questions.map((q, i) => `${i + 1}. ${q.slice(0, 200)}`).join("\n");
+  const user = `【试卷文字(含图片位置标记〖图k〗)】\n${marked.slice(0, 12000)}\n\n【题目列表】\n${list}`;
+  const out = await chat(cfg, { system: MATCH_SYSTEM, messages: [{ role: "user", content: user }], maxTokens: 1024, temperature: 0 });
+  const parsed = parseJsonLoose<{ map?: Record<string, number> }>(out);
+  const map: Record<string, number> = {};
+  if (parsed?.map) for (const [k, v] of Object.entries(parsed.map)) { const n = Number(v); if (Number.isFinite(n)) map[k] = n; }
+  return map;
+}
+
 export interface FilledAnswer { answer: string | string[] | null; analysis?: string }
 
 const FILL_SYSTEM = `你是初中物理老师的助教。下面给你一份题目列表(按序号)和一份参考答案文本，请把答案对应到每一道题。

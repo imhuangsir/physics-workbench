@@ -65,13 +65,13 @@ export async function compressToDataURL(src: Blob | string, maxDim = 1000, quali
     const dataUrl = typeof src === "string" ? src : await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result as string); r.onerror = rej; r.readAsDataURL(src); });
     const img = await new Promise<HTMLImageElement>((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = dataUrl; });
     let width = img.naturalWidth, height = img.naturalHeight;
-    if (!width || !height) return typeof src === "string" ? src : "";
+    if (!width || !height) return "";
     if (Math.max(width, height) > maxDim) { const s = maxDim / Math.max(width, height); width = Math.round(width * s); height = Math.round(height * s); }
     const canvas = document.createElement("canvas"); canvas.width = width; canvas.height = height;
-    const ctx = canvas.getContext("2d"); if (!ctx) return dataUrl;
+    const ctx = canvas.getContext("2d"); if (!ctx) return "";
     ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, width, height); ctx.drawImage(img, 0, 0, width, height);
     return canvas.toDataURL("image/jpeg", quality);
-  } catch { return typeof src === "string" ? src : ""; }
+  } catch { return ""; }
 }
 export async function fetchImageUrl(key: string): Promise<string> {
   const s = getSession();
