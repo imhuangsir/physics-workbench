@@ -27,15 +27,22 @@ const PRE = [
 ];
 const HELL = { sT: [34, 6, 10], sB: [120, 22, 14], g: [72, 20, 16], gD: [40, 10, 10], hl: [120, 34, 22], sun: [255, 110, 40] };
 function fresh() { return { y: FLOOR - PR, vy: 0, dir: 1, obs: [] as Ob[], items: [] as Item[], parts: [] as Part[], fires: [] as Fire[], dist: 0, next: 420, nextItem: 460, nextFire: 0, run: 0, spd: 165, lives: 3, inv: 0, shield: false, star: 0, slow: 0, boost: 0, gems: 0, pending: null as Plan | null, lastSafe: null as ("floor" | "ceil" | null), msFlag: 0, banner: null as (null | { text: string; t: number }) }; }
-// —— 机器人=CC0素材(gameart2d「The Robot」8帧跑步循环，切自 RobotFree.zip 的 Run(1..8)，公共外接框裁剪保连贯)；障碍/道具沿用玩家自有 AI 素材；缺图时回退矢量机器人，绝不崩 ——
-const SPR_NAMES = ["robot_run1", "robot_run2", "robot_run3", "robot_run4", "robot_run5", "robot_run6", "robot_run7", "robot_run8", "ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
+// —— 角色=CC0素材(gameart2d/pzUH，Run 帧按公共外接框裁剪保连贯，可在开始/结束界面切换)；障碍/道具沿用玩家自有 AI 素材 ——
+const CHARS = [
+  { key: "robot", name: "机甲", n: 8, pfx: "robot_run" },
+  { key: "girl", name: "冒险家", n: 8, pfx: "girl_run" },
+  { key: "santa", name: "圣诞人", n: 11, pfx: "santa_run" },
+] as const;
+type CharKey = (typeof CHARS)[number]["key"];
+const OBJ_NAMES = ["ob_spike", "ob_crate", "ob_crate2", "ob_saw", "ob_drone", "ob_gate", "ob_laser", "ob_pad", "item_heart", "item_shield", "item_star", "item_clock"];
+const SPR_NAMES = [...CHARS.flatMap((c) => Array.from({ length: c.n }, (_, i) => `${c.pfx}${i + 1}`)), ...OBJ_NAMES];
 const SPR: Record<string, HTMLImageElement> = {};
 function sprite(name: string): HTMLImageElement | null { const im = SPR[name]; return im && im.complete && im.naturalWidth > 0 ? im : null; }
 function preloadSprites(onload: () => void) { if (typeof window === "undefined") return; for (const nm of SPR_NAMES) { if (SPR[nm]) continue; const im = new Image(); im.onload = onload; im.onerror = () => {}; im.src = `/games/gravity-run/${nm}.png`; SPR[nm] = im; } }
 function blit(ctx: CanvasRenderingContext2D, im: HTMLImageElement, x: number, y: number, w: number, h: number, flipV: boolean) { if (flipV) { ctx.save(); ctx.translate(0, y + h); ctx.scale(1, -1); ctx.drawImage(im, x, 0, w, h); ctx.restore(); } else ctx.drawImage(im, x, y, w, h); }
 function blitRot(ctx: CanvasRenderingContext2D, im: HTMLImageElement, cx: number, cy: number, w: number, h: number, ang: number) { ctx.save(); ctx.translate(cx, cy); ctx.rotate(ang); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.restore(); }
-// 8 帧跑步循环，帧速随里程相位 run 推进(cruise≈2.3循环/秒)；未加载返回 null → 用矢量兜底
-function robotFrame(run: number) { const f = Math.floor(run * 1.3) % 8; return sprite("robot_run" + (f + 1)); }
+// 按所选角色取当前跑步帧，帧速随里程相位 run 推进(cruise≈2.3循环/秒)；未加载返回 null
+function robotFrame(run: number, key: CharKey) { const c = CHARS.find((x) => x.key === key) ?? CHARS[0]; const f = Math.floor(run * 1.3) % c.n; return sprite(c.pfx + (f + 1)); }
 function opp(s: "floor" | "ceil"): "floor" | "ceil" { return s === "floor" ? "ceil" : "floor"; }
 // 速度上限随里程递增：0–5km 470；5–10km 升到 570；10km 后炼狱最高 720
 function capAt(m: number) { return m < 5000 ? 470 : m < 10000 ? 470 + (m - 5000) / 5000 * 100 : Math.min(720, 570 + (m - 10000) / 5000 * 150); }
@@ -51,11 +58,16 @@ export function GravityRunGame() {
   const [classBest, setClassBest] = useState(0);
   const [gems, setGems] = useState(0);
   const [err, setErr] = useState<string | null>(null);
+  const [char, setChar] = useState<CharKey>("robot");
+  const charRef = useRef<CharKey>("robot");
   const [, bumpLoad] = useState(0);
   const st = useRef<S>(fresh());
   useEffect(() => { preloadSprites(() => bumpLoad((x) => x + 1)); }, []);
   // 进游戏就拉取历史最高分(个人+全班)，不再是"退出即销毁"
   useEffect(() => { loadScores(); }, []);
+  // 记住上次选择的角色
+  useEffect(() => { try { const c = localStorage.getItem("pw_gr_char") as CharKey | null; if (c && CHARS.some((x) => x.key === c)) { charRef.current = c; setChar(c); } } catch { /* ignore */ } }, []);
+  function pickChar(k: CharKey) { charRef.current = k; setChar(k); try { localStorage.setItem("pw_gr_char", k); } catch { /* ignore */ } }
 
   async function loadScores() {
     const s = getSession(); if (!s?.token) return;
@@ -173,7 +185,7 @@ export function GravityRunGame() {
     for (const fr of s.fires) drawFire(ctx, fr);
     for (const p of s.parts) { ctx.globalAlpha = Math.max(0, p.life * 2); ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, 2.4, 0, Math.PI * 2); ctx.fill(); }
     ctx.globalAlpha = 1;
-    if (!(s.inv > 0 && Math.floor(s.inv * 12) % 2 === 0)) drawRobot(ctx, PX, s.y, s.dir, s.run, s);
+    if (!(s.inv > 0 && Math.floor(s.inv * 12) % 2 === 0)) drawRobot(ctx, PX, s.y, s.dir, s.run, s, charRef.current);
     drawHUD(ctx, s);
     ctx.fillStyle = P.night ? "rgba(20,26,50,0.65)" : "rgba(255,255,255,0.7)"; ctx.fillRect(W - 96, 8, 84, 22);
     ctx.fillStyle = P.night ? "#fff" : "#1f2740"; ctx.font = "700 15px system-ui"; ctx.fillText(`${Math.floor(s.dist / 10)} m`, W - 88, 24);
@@ -191,13 +203,25 @@ export function GravityRunGame() {
         {over && (<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/80"><p className="text-lg font-bold">撞毁了！跑了 {score} m</p><p className="text-sm text-muted-foreground">我的最高 {myBest} m · 全班最高 {classBest} m</p><button className="rounded-lg bg-foreground px-4 py-1.5 text-sm font-semibold text-background" onClick={tap}>再来一局</button></div>)}
         {err && (<div className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-2xl bg-background/90 p-4 text-center"><p className="text-sm font-semibold">游戏出了点问题</p><p className="max-w-[90%] break-words text-xs text-muted-foreground">{err}</p><button className="rounded-lg bg-foreground px-4 py-1.5 text-sm font-semibold text-background" onClick={() => { reset(); setPlaying(true); }}>重试</button></div>)}
       </div>
+      {!playing && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm font-medium">选择角色</span>
+          {CHARS.map((c) => (
+            <button key={c.key} type="button" onClick={() => pickChar(c.key)}
+              className={`flex items-center gap-2 rounded-xl border px-2.5 py-1.5 text-sm transition ${char === c.key ? 'border-foreground bg-muted font-semibold' : 'border-border text-muted-foreground hover:bg-muted/60'}`}>
+              <img src={`/games/gravity-run/${c.pfx}1.png`} alt={c.name} className="h-9 w-auto" />
+              <span>{c.name}</span>
+            </button>
+          ))}
+        </div>
+      )}
       <div className="flex flex-wrap items-center gap-3">
         <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">本次 <b className="num">{score}</b> m</div>
         <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">我的最高 <b className="num">{myBest}</b> m</div>
         <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">全班最高 <b className="num">{classBest}</b> m</div>
         <div className="rounded-xl bg-muted px-3 py-1.5 text-sm">道具 <b className="num">{gems}</b></div>
       </div>
-      <p className="text-xs text-muted-foreground">点击（或空格）<b>翻转重力</b>，小机器人在地面/天花板间奔跑。<b>3 条命</b>（左上爱心），撞到会掉血并短暂无敌闪烁。障碍各有机制：尖锐<b>地刺</b>、<b>木箱</b>、旋转<b>锯片</b>、乱窜<b>无人机</b>、只能走一侧的<b>护栏门</b>、定时<b>激光</b>、还有会<b>强行加速</b>让你更难躲的加速带。沿途捡道具：<b>❤补血</b>、<b>护盾</b>（挡一次）、<b>⭐无敌冲刺</b>、<b>时缓</b>。背景由浅到深随里程推进；<b>5km 起障碍变高变快</b>，<b>1 万米进入炼狱阶段</b>（红色天地 + 高速<b>火球</b>来袭），比谁跑得远！</p>
+      <p className="text-xs text-muted-foreground">点击（或空格）<b>翻转重力</b>，角色在地面/天花板间奔跑（开始/结束界面可<b>切换角色</b>）。<b>3 条命</b>（左上爱心），撞到会掉血并短暂无敌闪烁。障碍各有机制：尖锐<b>地刺</b>、<b>木箱</b>、旋转<b>锯片</b>、乱窜<b>无人机</b>、只能走一侧的<b>护栏门</b>、定时<b>激光</b>、还有会<b>强行加速</b>让你更难躲的加速带。沿途捡道具：<b>❤补血</b>、<b>护盾</b>（挡一次）、<b>⭐无敌冲刺</b>、<b>时缓</b>。背景由浅到深随里程推进；<b>5km 起障碍变高变快</b>，<b>1 万米进入炼狱阶段</b>（红色天地 + 高速<b>火球</b>来袭），比谁跑得远！</p>
     </div>
   );
 }
@@ -333,8 +357,8 @@ function drawFire(ctx: CanvasRenderingContext2D, fr: Fire) {
 }
 // 机器人：CC0 贴图 8 帧跑步循环。脚底对齐地面、居中于 x、天花板奔跑时上下翻转。
 // 贴图未加载时不画(不再有矢量"旧形象"占位)——素材是同源静态资源，加载极快。
-function drawRobot(ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, run: number, s: S) {
-  const rim = robotFrame(run); if (!rim) return;
+function drawRobot(ctx: CanvasRenderingContext2D, x: number, y: number, dir: number, run: number, s: S, charKey: CharKey) {
+  const rim = robotFrame(run, charKey); if (!rim) return;
   const now = performance.now(), TAU = Math.PI * 2;
   ctx.save(); ctx.translate(x, y); ctx.scale(1, dir);
   if (s.star > 0) { const gl = ctx.createRadialGradient(0, 0, 3, 0, 0, 30), h = (now / 6) % 360; gl.addColorStop(0, `hsla(${h},90%,70%,0.6)`); gl.addColorStop(1, `hsla(${h},90%,70%,0)`); ctx.fillStyle = gl; ctx.beginPath(); ctx.arc(0, 0, 30, 0, TAU); ctx.fill(); }

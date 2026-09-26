@@ -4,3 +4,11 @@
 经 OpenGameArt 以 CC0(公共领域，无需署名)发布。
 来源：https://opengameart.org/content/the-robot-free-sprite
 取自 RobotFree.zip 的 Run (1..8).png，按 8 帧共同外接框裁剪、缩放到高 140px，未做任何抠图。
+
+冒险家女孩 8 帧 (girl_run1..8.png)：gameart2d.com「Adventurer Girl」(作者 pzUH)，CC0。
+来源：https://opengameart.org/content/adventurer-girl-free-sprite （取自 Adventure Girl.zip 的 Run (1..8).png）
+
+圣诞老人 11 帧 (santa_run1..11.png)：gameart2d.com「Santa Claus」(作者 pzUH)，CC0。
+来源：https://opengameart.org/content/santa-claus-free-sprites （取自 SantaSprites.zip 的 Run (1..11).png）
+
+以上角色均按各自 Run 帧的共同外接框裁剪、缩放到高 140px，未抠图；可在游戏开始/结束界面切换。
